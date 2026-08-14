@@ -48,12 +48,12 @@ Write-Host "=== 1. Setting environment variables... ===" -ForegroundColor Cyan
 
 # [!] Replace "YOUR_PROJECT_ID" with your actual Google Cloud Project ID.
 # Note: This is your unique Project ID (e.g., "my-project-123"), not the Project Name.
-$env:GOOGLE_CLOUD_PROJECT = "PROJECT ID"
+$env:GOOGLE_CLOUD_PROJECT = "YOUR_PROJECT_ID"
 
 # [!] Specify the region for the API request.
 # "global" routes automatically to the optimal location.
 # Other examples: "us-central1" (Iowa, USA) or "asia-northeast1" (Tokyo, Japan).
-$env:GOOGLE_CLOUD_LOCATION = "global"
+$env:GOOGLE_CLOUD_LOCATION = "us-central1"
 
 # [!] Set to "True" to route requests to the enterprise-grade Vertex AI (Agent Platform) backend.
 $env:GOOGLE_GENAI_USE_ENTERPRISE = "True"
@@ -67,11 +67,16 @@ Write-Host "=== 3. Creating request.py... ===" -ForegroundColor Cyan
 $pythonCode = @"
 from google import genai
 from google.genai.types import HttpOptions
+import os
 
 # Initialize the Gemini client.
 # Note: This automatically reads the GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION, 
 # and GOOGLE_GENAI_USE_ENTERPRISE environment variables set in Step 1.
-client = genai.Client(http_options=HttpOptions(api_version="v1"))
+client = genai.Client(
+    project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
+    location=os.environ.get("GOOGLE_CLOUD_LOCATION"),
+    http_options=HttpOptions(api_version="v1")
+)
 
 # Send a prompt request to the Google Cloud Agent Platform.
 response = client.models.generate_content(

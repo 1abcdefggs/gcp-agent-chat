@@ -1,0 +1,102 @@
+{
+  "name": "google-cloud-agent-platform-chat",
+  "displayName": "Google Cloud Agent Platform Chat",
+  "description": "IDE Sidebar Chat View for Google Cloud Agent Platform (Gemini Enterprise Agent)",
+  "version": "0.1.0",
+  "publisher": "1abcdefggs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1abcdefggs/google-cloud-agent-platform.git"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "agent-platform-sidebar",
+          "title": "Google Cloud Agent",
+          "icon": "$(comment-discussion)"
+        }
+      ],
+      "auxiliarybar": [
+        {
+          "id": "agent-platform-secondary",
+          "title": "Google Cloud Agent",
+          "icon": "$(comment-discussion)"
+        }
+      ]
+    },
+    "views": {
+      "agent-platform-sidebar": [
+        {
+          "id": "agent-platform-chat-view",
+          "name": "Gemini Agent Chat",
+          "type": "webview"
+        }
+      ],
+      "agent-platform-secondary": [
+        {
+          "id": "agent-platform-chat-view-secondary",
+          "name": "Gemini Agent Chat",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "agent-platform.openChat",
+        "title": "Google Cloud Agent: Open Chat"
+      }
+    ],
+    "configuration": {
+      "title": "Google Cloud Agent Platform",
+      "properties": {
+        "agentPlatform.projectId": {
+          "type": "string",
+          "default": "",
+          "description": "Google Cloud Project ID (e.g. 'my-gcp-project-123'). If left empty, GOOGLE_CLOUD_PROJECT environment variable will be used."
+        },
+        "agentPlatform.location": {
+          "type": "string",
+          "default": "global",
+          "description": "Google Cloud Region / Location (e.g. 'global', 'us-central1')."
+        },
+        "agentPlatform.language": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["auto", "en", "ar", "de", "es", "fr", "hi", "it", "ja", "ko", "nl", "pt", "ru", "zh"],
+          "enumDescriptions": [
+            "Auto Detect (Follow input language)",
+            "English (English)",
+            "Arabic (العربية)",
+            "German (Deutsch)",
+            "Spanish (Español)",
+            "French (Français)",
+            "Hindi (हिन्दी)",
+            "Italian (Italiano)",
+            "Japanese (日本語)",
+            "Korean (한국어)",
+            "Dutch (Nederlands)",
+            "Portuguese (Português)",
+            "Russian (Русский)",
+            "Chinese (中文)"
+          ],
+          "description": "Default target language for Agent responses."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0"
+  }
+}
