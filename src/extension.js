@@ -1,6 +1,7 @@
 const vscode = require('vscode');
 const { execFile } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 function activate(context) {
     const provider = new AgentPlatformChatViewProvider(context.extensionUri);
@@ -65,9 +66,18 @@ class AgentPlatformChatViewProvider {
         return customEnv;
     }
 
+    _getBridgeScript(workspaceFolder) {
+        const candidates = [
+            path.join(__dirname, 'chat_bridge.py'),
+            path.join(workspaceFolder, 'src', 'chat_bridge.py'),
+            path.join(workspaceFolder, 'chat_bridge.py')
+        ];
+        return candidates.find(p => fs.existsSync(p)) || candidates[0];
+    }
+
     _checkGcpStatus() {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || __dirname;
-        const bridgeScript = path.join(workspaceFolder, 'chat_bridge.py');
+        const bridgeScript = this._getBridgeScript(workspaceFolder);
         const customEnv = this._getEnv();
 
         execFile('python', [bridgeScript, '--status'], { cwd: workspaceFolder, env: customEnv }, (error, stdout) => {
@@ -103,7 +113,7 @@ class AgentPlatformChatViewProvider {
 
     _handleUserMessage(prompt, model, language) {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || __dirname;
-        const bridgeScript = path.join(workspaceFolder, 'chat_bridge.py');
+        const bridgeScript = this._getBridgeScript(workspaceFolder);
         const config = vscode.workspace.getConfiguration('agentPlatform');
         const defaultLang = config.get('language') || 'auto';
         const targetLang = language || defaultLang;

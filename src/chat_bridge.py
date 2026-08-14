@@ -62,7 +62,6 @@ def main():
             http_options=HttpOptions(api_version="v1")
         )
 
-        # Construct System Instruction based on selected language & natural language switching rules
         lang_instructions = {
             "auto": "Respond in the same language as the user's input.",
             "en": "You MUST respond in English.",

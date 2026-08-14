@@ -82,10 +82,11 @@ client = genai.Client(
 response = client.models.generate_content(
     # Specify the model. 
     # Available Serverless Google Models on Agent Platform:
+    # - "gemini-3.7-flash"
     # - "gemini-3.6-flash"      (NEW: Latest GA model, near-Pro performance)
     # - "gemini-3.5-flash-lite" (NEW: Ultra-fast & cost-effective lightweight model)
     # - "gemini-3.5-flash"      (Standard Flash model)
-    model="gemini-3.6-flash",
+    model="gemini-3.7-flash",
     
     # The actual text prompt (question) you want to ask the AI.
     

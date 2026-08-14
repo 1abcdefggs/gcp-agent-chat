@@ -2,7 +2,7 @@
   "name": "google-cloud-agent-platform-chat",
   "displayName": "Google Cloud Agent Platform Chat",
   "description": "IDE Sidebar Chat View for Google Cloud Agent Platform (Gemini Enterprise Agent)",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "publisher": "1abcdefggs",
   "repository": {
     "type": "git",
@@ -14,8 +14,7 @@
   "categories": [
     "Other"
   ],
-  "main": "./extension.js",
-
+  "main": "./src/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -71,7 +70,22 @@
         "agentPlatform.language": {
           "type": "string",
           "default": "auto",
-          "enum": ["auto", "en", "ar", "de", "es", "fr", "hi", "it", "ja", "ko", "nl", "pt", "ru", "zh"],
+          "enum": [
+            "auto",
+            "en",
+            "ar",
+            "de",
+            "es",
+            "fr",
+            "hi",
+            "it",
+            "ja",
+            "ko",
+            "nl",
+            "pt",
+            "ru",
+            "zh"
+          ],
           "enumDescriptions": [
             "Auto Detect (Follow input language)",
             "English (English)",
@@ -94,7 +108,8 @@
     }
   },
   "scripts": {
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint:version": "node -e \"const v=require('./package.json').version; if(!/^\\d+\\.\\d+\\.\\d+$/.test(v)){console.error('Invalid semver format:', v); process.exit(1);}; console.log('Version format valid:', v);\""
   },
   "devDependencies": {
     "@types/vscode": "^1.80.0"

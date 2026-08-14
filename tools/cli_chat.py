@@ -8,7 +8,7 @@ os.environ["GOOGLE_GENAI_USE_ENTERPRISE"] = "True"
 
 if not project_id:
     print("[Error] GOOGLE_CLOUD_PROJECT environment variable is not set.")
-    print("Please set your project ID (e.g. export GOOGLE_CLOUD_PROJECT='your-project-id' or $env:GOOGLE_CLOUD_PROJECT='your-project-id').")
+    print("Please run gcp-auth-setup or set GOOGLE_CLOUD_PROJECT environment variable.")
     sys.exit(1)
 
 from google import genai
