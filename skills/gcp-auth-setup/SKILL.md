@@ -5,7 +5,7 @@ description: >
   fetches available projects, and allows selecting the target Google Cloud Project ID and location.
 ---
 
-# 🔐 GCP Authentication & Project Setup Wizard
+# GCP Authentication & Project Setup Wizard
 
 This skill guides the user through authenticating with Google Cloud and configuring their active project ID and location.
 

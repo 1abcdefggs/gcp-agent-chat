@@ -1,0 +1,115 @@
+:root {
+    --bg-primary: var(--vscode-sideBar-background, #181825);
+    --text-color: var(--vscode-sideBar-foreground, #cdd6f4);
+    --muted-text: var(--vscode-descriptionForeground, #a6adc8);
+    --border-color: var(--vscode-sideBarSectionHeader-border, rgba(255, 255, 255, 0.08));
+    --primary-accent: var(--vscode-button-background, #89b4fa);
+    --primary-accent-hover: var(--vscode-button-hoverBackground, #b4befe);
+    --user-bubble: rgba(137, 180, 250, 0.12);
+    --agent-bubble: var(--vscode-editor-background, rgba(255, 255, 255, 0.03));
+    --warning-color: #f9e2af;
+    --error-color: #f38ba8;
+    --success-color: #a6e3a1;
+    --font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif);
+    --font-mono: var(--vscode-editor-font-family, Consolas, monospace);
+    --trans-fast: 0.15s ease;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    font-size: var(--vscode-font-size, 13px);
+    margin: 0;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* ── Common Flex & Icons ── */
+.top-row, .bottom-row, .left-badges, .right-badges, .badge, .lang-select-wrapper, .code-header, .image-preview-bar, .input-toolbar, .toolbar-left, .toolbar-right { display: flex; }
+.top-row, .bottom-row, .input-toolbar { justify-content: space-between; align-items: center; }
+.left-badges, .right-badges, .badge, .lang-select-wrapper, .toolbar-left, .toolbar-right { align-items: center; }
+.icon-btn, .remove-thumb-btn, .toolbar-btn, .send-btn-circle { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+.icon-svg, .icon-btn svg, .code-btn svg, .toolbar-btn svg, .send-btn-circle svg { fill: currentColor; }
+
+/* ── Top Header & Status ── */
+.header { display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 6px; }
+.left-badges, .right-badges { gap: 6px; }
+.badge { gap: 4px; padding: 2px 7px; border-radius: 12px; font-size: 0.72rem; font-weight: 500; }
+.badge.clickable { cursor: pointer; transition: opacity var(--trans-fast); }
+.badge.clickable:hover { opacity: 0.85; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background-color: currentColor; }
+.badge.connected { background: rgba(166, 227, 161, 0.15); color: var(--success-color); }
+.badge.disconnected { background: rgba(243, 139, 168, 0.15); color: var(--error-color); }
+.badge.cost-badge { background: rgba(203, 166, 247, 0.12); color: #cba6f7; }
+
+.icon-btn { background: transparent; color: var(--muted-text); padding: 3px; border-radius: 4px; transition: color var(--trans-fast), background var(--trans-fast); }
+.icon-btn:hover { color: var(--text-color); background: rgba(255, 255, 255, 0.08); }
+.icon-btn svg { width: 13px; height: 13px; }
+
+/* ── Selectors (Model & Language) ── */
+.bottom-row { gap: 8px; width: 100%; }
+.model-select-wrapper { flex: 1; }
+.lang-select-wrapper { gap: 5px; flex-shrink: 0; }
+.lang-label { font-size: 0.73rem; color: var(--muted-text); white-space: nowrap; }
+
+select { background: var(--vscode-dropdown-background, rgba(255, 255, 255, 0.05)); color: var(--vscode-dropdown-foreground, #cdd6f4); border: 1px solid var(--border-color); padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; outline: none; cursor: pointer; }
+#modelSelect { width: 100%; }
+#langSelect { min-width: 65px; padding: 2px 5px; font-size: 0.73rem; }
+
+/* ── Chat Container & Messages ── */
+.chat-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+.message { max-width: 92%; padding: 9px 12px; border-radius: 8px; line-height: 1.55; word-break: break-word; white-space: normal; }
+.message.user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 2px; white-space: pre-wrap; }
+.message.agent { align-self: flex-start; background: var(--agent-bubble); border-bottom-left-radius: 2px; }
+.message.system, .message.error { align-self: center; font-size: 0.78rem; border-radius: 6px; }
+.message.system { background: rgba(249, 226, 175, 0.08); color: var(--warning-color); }
+.message.error { background: rgba(243, 139, 168, 0.12); color: var(--error-color); }
+
+/* ── Markdown Typography ── */
+.md-content { line-height: 1.6; }
+.md-h2, .md-h3, .md-h4 { font-weight: 600; }
+.md-h2 { font-size: 1.05rem; color: var(--primary-accent); margin: 10px 0 4px; }
+.md-h3 { font-size: 0.95rem; color: var(--primary-accent); margin: 8px 0 4px; }
+.md-h4 { font-size: 0.88rem; color: var(--text-color); margin: 6px 0 2px; }
+.md-p { margin: 4px 0; }
+.md-hr { border: none; border-top: 1px solid var(--border-color); margin: 10px 0; }
+.md-ul, .md-ol { margin: 4px 0 6px; padding-left: 18px; }
+.md-li, .md-oli { margin: 2px 0; line-height: 1.5; }
+.md-inline-code { background: rgba(255, 255, 255, 0.08); color: var(--warning-color); padding: 1px 5px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.88em; }
+
+/* ── Code Blocks & Actions ── */
+pre { background: var(--vscode-editor-background, #11111b); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; margin: 6px 0; overflow-x: auto; position: relative; }
+code { font-family: var(--font-mono); font-size: 0.85em; }
+.code-header { justify-content: flex-end; gap: 4px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
+.code-btn { background: rgba(255, 255, 255, 0.05); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 3px; padding: 2px 7px; font-size: 0.7rem; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; transition: background var(--trans-fast); }
+.code-btn:hover { background: rgba(255, 255, 255, 0.12); }
+.code-btn svg { width: 11px; height: 11px; }
+
+/* ── Input Card & Toolbar ── */
+.input-wrapper { margin-top: 6px; padding-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.input-card { background: var(--vscode-input-background, rgba(255, 255, 255, 0.04)); border: 1px solid var(--border-color); border-radius: 10px; padding: 6px 8px 6px 10px; display: flex; flex-direction: column; gap: 4px; transition: border-color 0.2s, box-shadow 0.2s; }
+.input-card:focus-within { border-color: var(--primary-accent); box-shadow: 0 0 0 1px var(--primary-accent); }
+
+.image-preview-bar { gap: 6px; overflow-x: auto; padding: 2px 0; }
+.preview-thumb-container { position: relative; display: inline-block; }
+.preview-thumb { width: 42px; height: 42px; object-fit: cover; border-radius: 6px; border: 1px solid var(--primary-accent); }
+.remove-thumb-btn { position: absolute; top: -4px; right: -4px; background: var(--error-color); color: #111; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; font-weight: bold; }
+
+textarea#promptInput { width: 100%; background: transparent; border: none; outline: none; color: var(--vscode-input-foreground, #cdd6f4); font-family: inherit; font-size: 0.82rem; line-height: 1.5; padding: 4px 0; margin: 0; resize: none; min-height: 32px; max-height: 180px; height: 32px; box-sizing: border-box; overflow-y: hidden; }
+textarea#promptInput::placeholder { color: var(--muted-text); opacity: 0.8; }
+
+.input-toolbar { padding-top: 2px; }
+.toolbar-left, .toolbar-right { gap: 4px; }
+.toolbar-btn { background: transparent; color: var(--muted-text); border-radius: 5px; padding: 4px; transition: color var(--trans-fast), background var(--trans-fast); }
+.toolbar-btn:hover { color: var(--text-color); background: rgba(255, 255, 255, 0.08); }
+.toolbar-btn svg { width: 15px; height: 15px; }
+
+.send-btn-circle { background: var(--primary-accent); color: var(--vscode-button-foreground, #11111b); border-radius: 50%; width: 26px; height: 26px; transition: opacity var(--trans-fast), transform 0.1s; }
+.send-btn-circle:hover:not(:disabled) { opacity: 0.9; transform: scale(1.05); }
+.send-btn-circle:disabled { opacity: 0.3; cursor: not-allowed; }
+.send-btn-circle svg { width: 13px; height: 13px; }

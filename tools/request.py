@@ -1,3 +1,9 @@
+"""
+Google Cloud Agent Platform -SDK Request Test Script
+This script is a simple "one-shot" tool for testing connectivity to the Gemini API.
+Pass the text as an argument from the terminal, receive the AI's answer only once, and exit.
+Usage: python tools/request.py "Hello"
+"""
 import os
 import sys
 from google import genai

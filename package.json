@@ -1,8 +1,8 @@
 {
-  "name": "google-cloud-agent-platform-chat",
+  "name": "google-cloud-agent-platform",
   "displayName": "Google Cloud Agent Platform Chat",
   "description": "IDE Sidebar Chat View for Google Cloud Agent Platform (Gemini Enterprise Agent)",
-  "version": "0.2.2",
+  "version": "0.4.7",
   "publisher": "1abcdefggs",
   "repository": {
     "type": "git",
@@ -21,14 +21,14 @@
         {
           "id": "agent-platform-sidebar",
           "title": "Google Cloud Agent",
-          "icon": "$(comment-discussion)"
+          "icon": "asset/icon.svg"
         }
       ],
-      "auxiliarybar": [
+      "panel": [
         {
-          "id": "agent-platform-secondary",
+          "id": "agent-platform-panel",
           "title": "Google Cloud Agent",
-          "icon": "$(comment-discussion)"
+          "icon": "asset/icon.svg"
         }
       ]
     },
@@ -37,14 +37,16 @@
         {
           "id": "agent-platform-chat-view",
           "name": "Gemini Agent Chat",
-          "type": "webview"
+          "type": "webview",
+          "icon": "asset/icon.svg"
         }
       ],
-      "agent-platform-secondary": [
+      "agent-platform-panel": [
         {
-          "id": "agent-platform-chat-view-secondary",
+          "id": "agent-platform-chat-view-panel",
           "name": "Gemini Agent Chat",
-          "type": "webview"
+          "type": "webview",
+          "icon": "asset/icon.svg"
         }
       ]
     },
@@ -52,57 +54,111 @@
       {
         "command": "agent-platform.openChat",
         "title": "Google Cloud Agent: Open Chat"
+      },
+      {
+        "command": "agent-platform.askAboutCode",
+        "title": "Google Cloud Agent: Ask about this code"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "agent-platform.askAboutCode",
+          "when": "editorHasSelection",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "Google Cloud Agent Platform",
       "properties": {
         "agentPlatform.projectId": {
+          "order": 1,
           "type": "string",
           "default": "",
           "description": "Google Cloud Project ID (e.g. 'my-gcp-project-123'). If left empty, GOOGLE_CLOUD_PROJECT environment variable will be used."
         },
         "agentPlatform.location": {
+          "order": 2,
           "type": "string",
           "default": "global",
           "description": "Google Cloud Region / Location (e.g. 'global', 'us-central1')."
         },
+        "agentPlatform.model": {
+          "order": 3,
+          "type": "string",
+          "default": "gemini-3.7-flash",
+          "enum": [
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-2.5-flash",
+            "gemini-2.5-pro"
+          ],
+          "enumDescriptions": [
+            "gemini-3.7-flash (Fast, cost-effective, multimodal)",
+            "gemini-3.6-flash",
+            "gemini-2.5-flash",
+            "gemini-2.5-pro (Deep reasoning and complex task execution)"
+          ],
+          "description": "Default Gemini model for Agent conversations."
+        },
         "agentPlatform.language": {
+          "order": 4,
           "type": "string",
           "default": "auto",
           "enum": [
             "auto",
             "en",
             "ar",
-            "de",
-            "es",
+            "zh",
+            "nl",
             "fr",
+            "de",
             "hi",
             "it",
             "ja",
             "ko",
-            "nl",
             "pt",
             "ru",
-            "zh"
+            "es"
           ],
           "enumDescriptions": [
             "Auto Detect (Follow input language)",
             "English (English)",
             "Arabic (العربية)",
-            "German (Deutsch)",
-            "Spanish (Español)",
+            "Chinese (中文)",
+            "Dutch (Nederlands)",
             "French (Français)",
+            "German (Deutsch)",
             "Hindi (हिन्दी)",
             "Italian (Italiano)",
             "Japanese (日本語)",
             "Korean (한국어)",
-            "Dutch (Nederlands)",
             "Portuguese (Português)",
             "Russian (Русский)",
-            "Chinese (中文)"
+            "Spanish (Español)"
           ],
           "description": "Default target language for Agent responses."
+        },
+        "agentPlatform.monthlyBudgetLimit": {
+          "order": 5,
+          "type": "number",
+          "default": 10.0,
+          "description": "Monthly budget limit ($) for Gemini API token usage. Requests will be safely blocked when exceeded."
+        },
+        "agentPlatform.sessionStorageLocation": {
+          "order": 6,
+          "type": "string",
+          "default": "global",
+          "enum": [
+            "global",
+            "workspace"
+          ],
+          "enumDescriptions": [
+            "Global AppData directory (Zero repository pollution and maximum privacy)",
+            "Current workspace directory (.agents/sessions/)"
+          ],
+          "description": "Location where chat session logs are automatically stored."
         }
       }
     }

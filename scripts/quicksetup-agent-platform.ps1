@@ -24,7 +24,7 @@ You can connect by following the instructions here.
 https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/start
 
 .USAGE INSTRUCTIONS (2 Patterns)
-[Pattern 1: Run as a saved file (Recommended)]
+[Pattern 1: Run as a saved file]
 1. Save this code as a file named `quicksetup-agent-platform.ps1`.
 2. Change "YOUR_PROJECT_ID" in the code below to your actual Google Cloud Project ID.
 3. Open your PowerShell terminal, navigate to the folder, and run: 

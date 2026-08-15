@@ -5,7 +5,7 @@ description: >
   Supports model selection (gemini-2.5-flash, gemini-3.5-flash, gemini-3.7-flash) and target language overrides.
 ---
 
-# ☁️ Google Cloud Agent Platform Query Skill
+# Google Cloud Agent Platform Query Skill
 
 Use this skill to interface directly with Google Cloud Agent Platform models using Application Default Credentials.
 

@@ -39,16 +39,10 @@ def run_mcp_server():
                 http_options=HttpOptions(api_version="v1")
             )
 
-            lang_map = {
-                "auto": "Respond in the user's prompt language.",
-                "en": "Respond in English.",
-                "ja": "Respond in Japanese.",
-                "es": "Respond in Spanish.",
-                "de": "Respond in German.",
-                "fr": "Respond in French.",
-                "zh": "Respond in Chinese."
-            }
-            instruction = lang_map.get(language, lang_map["auto"])
+            if language.lower() == "auto":
+                instruction = "Respond in the user's prompt language."
+            else:
+                instruction = f"Respond in {language}."
 
             response = client.models.generate_content(
                 model=model,

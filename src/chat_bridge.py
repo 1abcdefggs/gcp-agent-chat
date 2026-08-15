@@ -1,26 +1,50 @@
+"""
+Google Cloud Agent Platform - JSON-RPC Daemon & Backend Bridge
+Handles IPC between the VS Code Extension (Node.js) and Google Cloud Vertex AI (Python SDK),
+providing autonomous tool execution and multi-modal chat support.
+"""
 import sys
 import json
 import os
+import re
+import subprocess
 
-def check_gcp_status():
-    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
-    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+def check_gcp_status(params=None):
+    if params is None:
+        params = {}
+    project_id = params.get("projectId") or os.environ.get("GOOGLE_CLOUD_PROJECT")
+    location = params.get("location") or os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+
+    account = "ADC Credentials"
+    try:
+        import google.auth
+        credentials, default_project = google.auth.default()
+        if not project_id and default_project:
+            project_id = default_project
+        account = getattr(credentials, "service_account_email", None) or getattr(credentials, "_account", None) or "Google Cloud Authenticated"
+    except Exception:
+        account = "ADC Initialized"
+
+    if not project_id:
+        try:
+            res = subprocess.run(["gcloud", "config", "get-value", "project"], capture_output=True, text=True, encoding="utf-8", timeout=5)
+            p = res.stdout.strip()
+            if p and p != "(unset)" and not p.startswith("ERROR"):
+                project_id = p
+        except Exception:
+            pass
+
     if not project_id:
         return {
             "success": False,
             "authenticated": False,
             "project_id": None,
             "location": location,
-            "error": "GOOGLE_CLOUD_PROJECT is not set"
+            "error": "Google Cloud Project ID is not configured. Click Settings to set agentPlatform.projectId."
         }
-    
-    account = "ADC Credentials"
-    try:
-        import google.auth
-        credentials, _ = google.auth.default()
-        account = getattr(credentials, "service_account_email", None) or getattr(credentials, "_account", None) or "Google Cloud Authenticated"
-    except Exception:
-        account = "ADC Initialized"
+
+    os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
+    os.environ["GOOGLE_CLOUD_LOCATION"] = location
 
     return {
         "success": True,
@@ -29,9 +53,6 @@ def check_gcp_status():
         "location": location,
         "account": account
     }
-
-import re
-import subprocess
 
 def read_file(filepath: str) -> str:
     """Read the text content of a file in the workspace or project repository.
@@ -86,7 +107,7 @@ def run_command(command: str) -> str:
         return "[Security Guardrail Error] Forced git push is blocked."
 
     try:
-        res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=15, cwd=os.getcwd())
+        res = subprocess.run(command, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15, cwd=os.getcwd())
         out = (res.stdout or "") + (f"\n[stderr]: {res.stderr}" if res.stderr else "")
         return out.strip() or "(Command completed with no output)"
     except Exception as e:
@@ -97,12 +118,16 @@ def handle_chat_message(params):
     model_name = params.get("model", "gemini-3.7-flash")
     language = params.get("language", "auto")
     
-    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
-    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+    project_id = params.get("projectId") or os.environ.get("GOOGLE_CLOUD_PROJECT")
+    location = params.get("location") or os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
     os.environ["GOOGLE_GENAI_USE_ENTERPRISE"] = "True"
 
     if not project_id:
-        raise ValueError("GOOGLE_CLOUD_PROJECT is not set. Please configure it in Settings or environment variables.")
+        st = check_gcp_status(params)
+        project_id = st.get("project_id")
+
+    if not project_id:
+        raise ValueError("Google Cloud Project ID is not set. Please configure 'agentPlatform.projectId' in VS Code Settings.")
 
     from google import genai
     from google.genai.types import HttpOptions, GenerateContentConfig
@@ -113,17 +138,13 @@ def handle_chat_message(params):
         http_options=HttpOptions(api_version="v1")
     )
 
-    lang_instructions = {
-        "auto": "Respond in the same language as the user's input.",
-        "ja": "You MUST respond in Japanese.",
-        "en": "You MUST respond in English.",
-        "es": "You MUST respond in Spanish.",
-        "de": "You MUST respond in German.",
-        "fr": "You MUST respond in French.",
-        "zh": "You MUST respond in Chinese."
-    }
+    language_name = params.get("languageName", "Auto")
 
-    base_lang = lang_instructions.get(language, lang_instructions["auto"])
+    if language == "auto" or language_name == "Auto":
+        base_lang = "Respond in the same language as the user's input."
+    else:
+        base_lang = f"You MUST respond in {language_name}."
+
     sys_prompt = (
         f"You are a helpful and autonomous AI Agent on Google Cloud Agent Platform. {base_lang} "
         "You have full access to workspace inspection tools: `read_file`, `list_files`, and `run_command`. "
@@ -134,9 +155,21 @@ def handle_chat_message(params):
 
     tools = [read_file, list_files, run_command]
 
+    contents = [prompt]
+    images = params.get("images", [])
+    if images and len(images) > 0:
+        import base64
+        from google.genai import types
+        for img in images:
+            b64_data = img.get("data", "")
+            mime = img.get("mimeType", "image/png")
+            if b64_data:
+                raw_bytes = base64.b64decode(b64_data)
+                contents.append(types.Part.from_bytes(data=raw_bytes, mime_type=mime))
+
     response = client.models.generate_content(
         model=model_name,
-        contents=prompt,
+        contents=contents,
         config=GenerateContentConfig(
             system_instruction=sys_prompt,
             tools=tools
@@ -176,7 +209,7 @@ def main():
                 params = req.get("params", {})
 
                 if method == "gcp/checkStatus":
-                    res = check_gcp_status()
+                    res = check_gcp_status(params)
                     print(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": res}), flush=True)
                 elif method == "chat/sendMessage":
                     res = handle_chat_message(params)
