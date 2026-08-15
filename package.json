@@ -2,7 +2,7 @@
   "name": "google-cloud-agent-platform-chat",
   "displayName": "Google Cloud Agent Platform Chat",
   "description": "IDE Sidebar Chat View for Google Cloud Agent Platform (Gemini Enterprise Agent)",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "publisher": "1abcdefggs",
   "repository": {
     "type": "git",

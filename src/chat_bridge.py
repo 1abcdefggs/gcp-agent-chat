@@ -30,6 +30,68 @@ def check_gcp_status():
         "account": account
     }
 
+import re
+import subprocess
+
+def read_file(filepath: str) -> str:
+    """Read the text content of a file in the workspace or project repository.
+
+    Args:
+        filepath: Relative or absolute path to the file to read (e.g. 'package.json', 'src/extension.js').
+    """
+    if re.search(r'\.env(\.local|\.development|\.production|\.test)?', filepath, re.IGNORECASE):
+        return "[Security Guardrail Error] Access to .env files is blocked by security policy."
+
+    try:
+        clean_path = filepath.strip("'\"")
+        full_path = os.path.abspath(clean_path)
+        with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        if len(content) > 12000:
+            return content[:12000] + "\n\n...[Truncated remainder of file]..."
+        return content or "(File is empty)"
+    except Exception as e:
+        return f"Error reading file '{filepath}': {str(e)}"
+
+def list_files(dirpath: str = ".") -> str:
+    """List files and subdirectories in a workspace directory.
+
+    Args:
+        dirpath: The path of the directory to list relative to workspace root. Defaults to '.' (root).
+    """
+    try:
+        clean_dir = dirpath.strip("'\"") if dirpath else "."
+        full_path = os.path.abspath(clean_dir)
+        entries = os.listdir(full_path)
+        formatted = []
+        for name in entries:
+            p = os.path.join(full_path, name)
+            prefix = "[DIR] " if os.path.isdir(p) else "[FILE]"
+            formatted.append(f"{prefix} {name}")
+        return "\n".join(formatted) if formatted else "(Empty directory)"
+    except Exception as e:
+        return f"Error listing directory '{dirpath}': {str(e)}"
+
+def run_command(command: str) -> str:
+    """Execute a non-destructive shell command (e.g., git status, git log, dir) in the workspace directory.
+
+    Args:
+        command: The command line string to run.
+    """
+    if re.search(r'\.env', command, re.IGNORECASE):
+        return "[Security Guardrail Error] Commands accessing .env files are blocked."
+    if re.search(r'rm\s+-rf\s+(\/|~|\.\.|\/\*)', command, re.IGNORECASE):
+        return "[Security Guardrail Error] Destructive deletion commands are blocked."
+    if re.search(r'git\s+push\s+.*(--force|-f)', command, re.IGNORECASE):
+        return "[Security Guardrail Error] Forced git push is blocked."
+
+    try:
+        res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=15, cwd=os.getcwd())
+        out = (res.stdout or "") + (f"\n[stderr]: {res.stderr}" if res.stderr else "")
+        return out.strip() or "(Command completed with no output)"
+    except Exception as e:
+        return f"Command execution error: {str(e)}"
+
 def handle_chat_message(params):
     prompt = params.get("prompt", "")
     model_name = params.get("model", "gemini-3.7-flash")
@@ -63,15 +125,22 @@ def handle_chat_message(params):
 
     base_lang = lang_instructions.get(language, lang_instructions["auto"])
     sys_prompt = (
-        f"You are a helpful AI Agent on Google Cloud Agent Platform. {base_lang} "
+        f"You are a helpful and autonomous AI Agent on Google Cloud Agent Platform. {base_lang} "
+        "You have full access to workspace inspection tools: `read_file`, `list_files`, and `run_command`. "
+        "When the user asks about the workspace, repository, files, status, or code, ALWAYS use these tools to inspect the real files before answering. "
         "CRITICAL RULE: If the user explicitly asks in natural language to switch language, "
         "you MUST immediately switch your response language to that requested language."
     )
 
+    tools = [read_file, list_files, run_command]
+
     response = client.models.generate_content(
         model=model_name,
         contents=prompt,
-        config=GenerateContentConfig(system_instruction=sys_prompt)
+        config=GenerateContentConfig(
+            system_instruction=sys_prompt,
+            tools=tools
+        )
     )
 
     usage = {}
@@ -83,7 +152,8 @@ def handle_chat_message(params):
 
     return {
         "success": True,
-        "text": response.text,
+        "type": "text",
+        "text": response.text or "",
         "usage": usage
     }
 

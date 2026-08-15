@@ -1,5 +1,7 @@
 const vscode = require('vscode');
 const path = require('path');
+const fs = require('fs');
+const { exec } = require('child_process');
 
 const { ChatStateManager } = require('./state/chat_state_manager');
 const { RpcClient } = require('./bridge/rpc_client');
@@ -133,6 +135,64 @@ class AgentPlatformChatViewProvider {
         });
     }
 
+    async _executeTool(name, args) {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+
+        if (name === 'read_file') {
+            const filepath = args.filepath;
+            const hookCheck = this._hooks.verifyPreToolUse(filepath);
+            if (!hookCheck.allowed) {
+                return { error: hookCheck.reason };
+            }
+            const fullPath = path.isAbsolute(filepath) ? filepath : path.join(workspaceRoot, filepath);
+            try {
+                const content = await fs.promises.readFile(fullPath, 'utf8');
+                if (content.length > 10000) {
+                    return { result: content.substring(0, 10000) + "\n\n...[Truncated remainder of file]..." };
+                }
+                return { result: content };
+            } catch (err) {
+                return { error: `Failed to read file '${filepath}': ${err.message}` };
+            }
+        }
+
+        if (name === 'list_files') {
+            const dirpath = args.dirpath || '.';
+            const hookCheck = this._hooks.verifyPreToolUse(dirpath);
+            if (!hookCheck.allowed) {
+                return { error: hookCheck.reason };
+            }
+            const fullPath = path.isAbsolute(dirpath) ? dirpath : path.join(workspaceRoot, dirpath);
+            try {
+                const entries = await fs.promises.readdir(fullPath, { withFileTypes: true });
+                const list = entries.map(e => `${e.isDirectory() ? '[DIR] ' : '[FILE] '} ${e.name}`).join('\n');
+                return { result: list || '(empty directory)' };
+            } catch (err) {
+                return { error: `Failed to list directory '${dirpath}': ${err.message}` };
+            }
+        }
+
+        if (name === 'run_command') {
+            const command = args.command;
+            const hookCheck = this._hooks.verifyPreToolUse(command);
+            if (!hookCheck.allowed) {
+                return { error: hookCheck.reason };
+            }
+            return new Promise((resolve) => {
+                exec(command, { cwd: workspaceRoot, timeout: 15000 }, (error, stdout, stderr) => {
+                    if (error) {
+                        resolve({ error: `Command failed: ${stderr || error.message}` });
+                    } else {
+                        const out = (stdout || '') + (stderr ? `\n[stderr]: ${stderr}` : '');
+                        resolve({ result: out.trim() || '(No output)' });
+                    }
+                });
+            });
+        }
+
+        return { error: `Unknown tool: ${name}` };
+    }
+
     async _handleUserMessage(prompt, model, language) {
         if (!prompt || !prompt.trim()) return;
 
@@ -161,25 +221,25 @@ class AgentPlatformChatViewProvider {
         const agentMsg = this._state.addMessage('agent', '...', { status: 'loading' });
 
         try {
-            // 5. Dispatch request to Python JSON-RPC daemon
             const response = await this._rpc.call('chat/sendMessage', {
                 prompt: effectivePrompt,
                 model: model || this._state.selectedModel,
                 language: language || this._state.targetLanguage
             });
 
-            if (response && response.text) {
+            if (!response || !response.success) {
                 this._state.updateMessage(agentMsg.id, {
-                    text: response.text,
-                    status: 'complete',
-                    usage: response.usage
-                });
-            } else {
-                this._state.updateMessage(agentMsg.id, {
-                    text: 'Failed to receive a valid response.',
+                    text: `Error: ${response?.error || 'Failed to receive a valid response.'}`,
                     status: 'error'
                 });
+                return;
             }
+
+            this._state.updateMessage(agentMsg.id, {
+                text: response.text || '(No text returned)',
+                status: 'complete',
+                usage: response.usage
+            });
         } catch (err) {
             this._state.updateMessage(agentMsg.id, {
                 text: `Error: ${err.message || 'Unknown RPC Error'}`,
