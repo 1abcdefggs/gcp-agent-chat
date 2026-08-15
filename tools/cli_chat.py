@@ -1,3 +1,9 @@
+"""
+Google Cloud Agent Platform - Interactive Terminal Chat
+This script is a "conversational (interactive) chat" tool for communicating with AI continuously in the terminal.
+The chat state continues until 'exit' or 'quit' is entered, maintaining the context of past conversations.
+Usage: python tools/cli_chat.py
+"""
 import os
 import sys
 
@@ -16,7 +22,7 @@ from google.genai.types import HttpOptions
 
 def start_interactive_chat():
     print("=" * 60)
-    print(" ☁️  Google Cloud Agent Platform - Terminal Chat")
+    print(" Google Cloud Agent Platform - Terminal Chat")
     print(" (Type 'exit' or 'quit' to terminate)")
     print("=" * 60)
 

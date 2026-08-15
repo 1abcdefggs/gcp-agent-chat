@@ -1,10 +1,15 @@
 {
-  "hooks": [
-    {
-      "event": "PreToolUse",
-      "matcher": ".*",
-      "command": "powershell",
-      "args": ["-ExecutionPolicy", "Bypass", "-File", "./hooks/env-protection.ps1"]
-    }
-  ]
+  "env-protection": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File ./hooks/env-protection.ps1"
+          }
+        ]
+      }
+    ]
+  }
 }

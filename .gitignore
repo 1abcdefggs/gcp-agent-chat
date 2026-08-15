@@ -22,9 +22,8 @@ yarn-error.log*
 # VS Code extension build artifacts
 *.vsix
 
-vscode-1.107.0/
-implementation_plan.md
-re01.md
-vscode-1.107.0.tar.gz
+# Agent private session logs & history
+.agents/sessions/
+*.jsonl
 
 docs

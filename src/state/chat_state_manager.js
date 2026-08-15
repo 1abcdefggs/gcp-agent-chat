@@ -1,11 +1,16 @@
 const EventEmitter = require('events');
+const vscode = require('vscode');
+const { SUPPORTED_MODELS, SUPPORTED_LANGUAGES, DEFAULT_CONFIG } = require('../config/constants');
 
 class ChatStateManager extends EventEmitter {
     constructor() {
         super();
         this.messages = [];
-        this.selectedModel = 'gemini-3.7-flash';
-        this.targetLanguage = 'auto';
+        const config = typeof vscode !== 'undefined' && vscode.workspace ? vscode.workspace.getConfiguration('agentPlatform') : null;
+        this.selectedModel = (config && config.get('model')) || DEFAULT_CONFIG.model;
+        this.targetLanguage = (config && config.get('language')) || DEFAULT_CONFIG.language;
+        this.availableModels = SUPPORTED_MODELS;
+        this.availableLanguages = SUPPORTED_LANGUAGES;
         this.gcpStatus = {
             authenticated: false,
             projectId: null,
@@ -24,7 +29,9 @@ class ChatStateManager extends EventEmitter {
             messages: this.messages,
             model: this.selectedModel,
             language: this.targetLanguage,
-            gcpStatus: this.gcpStatus
+            gcpStatus: this.gcpStatus,
+            availableModels: this.availableModels,
+            availableLanguages: this.availableLanguages
         });
     }
 
@@ -35,7 +42,7 @@ class ChatStateManager extends EventEmitter {
     /** Add message and broadcast to all active webviews */
     addMessage(sender, text, extra = {}) {
         const message = {
-            id: 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+            id: 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
             sender,
             text,
             timestamp: Date.now(),
@@ -44,6 +51,18 @@ class ChatStateManager extends EventEmitter {
         this.messages.push(message);
         this.broadcast({ type: 'addMessage', message });
         return message;
+    }
+
+    /** Clear all messages (new session) and sync webviews */
+    clearMessages() {
+        this.messages = [];
+        this.broadcast({ type: 'syncState', messages: [] });
+    }
+
+    /** Replace messages (load session) and sync webviews */
+    setMessages(messages) {
+        this.messages = Array.isArray(messages) ? messages : [];
+        this.broadcast({ type: 'syncState', messages: this.messages });
     }
 
     /** Update message status (loading, complete, error, etc.) */

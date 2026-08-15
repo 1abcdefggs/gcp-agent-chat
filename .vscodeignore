@@ -9,6 +9,8 @@ vscode-1.107.0/**
 vscode-1.107.0.tar.gz
 __pycache__/**
 **/*.pyc
-implementation_plan.md
+*.vsix
+docs/**
+scripts/**
 google-cloud-agent-platform.code-workspace
-quicksetup-agent-platform.ps1
+
