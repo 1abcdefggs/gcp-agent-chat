@@ -398,36 +398,64 @@ class AgentPlatformChatViewProvider {
 
         .input-area {
             display: flex;
+            align-items: flex-end;
             gap: 6px;
+            background: var(--vscode-input-background, #282a36);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 4px 6px;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-area:focus-within {
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 1px var(--primary-accent);
         }
 
         textarea {
             flex: 1;
-            background: var(--vscode-input-background, #313244);
+            background: transparent;
             color: var(--vscode-input-foreground, #cdd6f4);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 8px;
+            border: none;
+            padding: 4px 2px;
             font-family: inherit;
-            font-size: 0.85rem;
+            font-size: 0.84rem;
             resize: none;
             outline: none;
-            height: 38px;
+            height: 32px;
+            line-height: 1.4;
         }
 
-        textarea:focus { border-color: var(--primary-accent); }
-
         button.send-btn {
-            background: #89b4fa;
+            background: var(--primary-accent, #89b4fa);
             color: #11111b;
             border: none;
             border-radius: 6px;
-            padding: 0 12px;
-            font-weight: bold;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
+            flex-shrink: 0;
+            margin-bottom: 2px;
+            transition: opacity 0.15s ease, transform 0.1s ease;
         }
 
-        button.send-btn:hover { opacity: 0.85; }
+        button.send-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.04);
+        }
+
+        button.send-btn:active {
+            transform: scale(0.96);
+        }
+
+        button.send-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
     </style>
 </head>
 <body>
@@ -459,8 +487,10 @@ class AgentPlatformChatViewProvider {
     <div class="input-wrapper">
         <div class="autocomplete-dropdown" id="autoDropdown"></div>
         <div class="input-area">
-            <textarea id="promptInput" placeholder="Type a message... (type / for skills)"></textarea>
-            <button class="send-btn" id="sendBtn">Send</button>
+            <textarea id="promptInput" placeholder="Type a message... (/ for skills)"></textarea>
+            <button class="send-btn" id="sendBtn" title="Send (Enter)">
+                <svg viewBox="0 0 16 16"><path d="M1.5 1.5l13 6.5-13 6.5 1.5-6.5zm2 5.5l5.5 1-5.5 1V13l9.5-5-9.5-5z"/></svg>
+            </button>
         </div>
     </div>
 
@@ -514,11 +544,6 @@ class AgentPlatformChatViewProvider {
             vscode.postMessage({ type: 'openSettings' });
         });
 
-        projectBadge.addEventListener('click', () => {
-            projectLabel.textContent = 'Checking...';
-            vscode.postMessage({ type: 'checkStatus' });
-        });
-
         promptInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -564,17 +589,40 @@ class AgentPlatformChatViewProvider {
             }
         });
 
+        let isProjectMasked = true;
+        let currentProjectId = null;
+
+        function maskProjectId(id) {
+            if (!id) return 'None';
+            if (id.length <= 6) return '••••••';
+            return id.substring(0, 3) + '••••' + id.substring(id.length - 2);
+        }
+
         function updateGcpBadge(status) {
             if (status.authenticated && status.projectId) {
+                currentProjectId = status.projectId;
                 projectBadge.className = 'project-badge connected';
-                projectLabel.textContent = 'PROJECT ID: ' + status.projectId;
-                projectBadge.title = 'Connected: ' + status.projectId + ' (' + (status.account || 'ADC') + ')';
+                const displayId = isProjectMasked ? maskProjectId(status.projectId) : status.projectId;
+                projectLabel.textContent = 'PROJECT ID: ' + displayId;
+                projectBadge.title = 'Connected (Click to toggle mask / double click to refresh)';
             } else {
+                currentProjectId = null;
                 projectBadge.className = 'project-badge disconnected';
                 projectLabel.textContent = 'PROJECT ID: None';
                 projectBadge.title = status.error || 'Click to configure Project ID';
             }
         }
+
+        projectBadge.addEventListener('click', (e) => {
+            if (currentProjectId) {
+                isProjectMasked = !isProjectMasked;
+                const displayId = isProjectMasked ? maskProjectId(currentProjectId) : currentProjectId;
+                projectLabel.textContent = 'PROJECT ID: ' + displayId;
+            } else {
+                projectLabel.textContent = 'PROJECT ID: Checking...';
+                vscode.postMessage({ type: 'checkStatus' });
+            }
+        });
 
         function renderSuggestions(suggestions) {
             if (!suggestions || suggestions.length === 0) {

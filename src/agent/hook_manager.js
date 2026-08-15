@@ -1,3 +1,9 @@
+/**
+ * Hook Manager
+ * PreToolUse security verification before tool/prompt execution.
+ * References guardrail concepts from antigravity-agent-lifecycle (MIT License, Copyright (c) 2026 Figueroa, Carlos Luciano).
+ */
+
 class HookManager {
     /**
      * PreToolUse security verification before tool/prompt execution.

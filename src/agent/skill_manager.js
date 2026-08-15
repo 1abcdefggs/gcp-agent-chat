@@ -1,3 +1,9 @@
+/**
+ * Skill Manager
+ * Discovers and injects external agent skills.
+ * References skill architectures from antigravity-agent-lifecycle (MIT License, Copyright (c) 2026 Figueroa, Carlos Luciano).
+ */
+
 const fs = require('fs');
 const path = require('path');
 
