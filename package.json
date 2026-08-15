@@ -1,18 +1,51 @@
 {
-  "name": "google-cloud-agent-platform",
-  "displayName": "Google Cloud Agent Platform Chat",
-  "description": "IDE Sidebar Chat View for Google Cloud Agent Platform (Gemini Enterprise Agent)",
-  "version": "0.4.7",
+  "name": "gcp-agent-chat",
+  "displayName": "GCP Agent Chat - Google Cloud Vertex AI & Gemini Assistant",
+  "description": "Native IDE sidebar chat assistant powered by Google Cloud Vertex AI (Gemini 3.7-flash) with zero-CLI IDE login, autonomous tool execution, and session management.",
+  "version": "0.5.0",
   "publisher": "1abcdefggs",
+  "author": {
+    "name": "1abcdefggs",
+    "url": "https://github.com/1abcdefggs"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/1abcdefggs/gcp-agent-chat#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/1abcdefggs/google-cloud-agent-platform.git"
+    "url": "https://github.com/1abcdefggs/gcp-agent-chat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/1abcdefggs/gcp-agent-chat/issues"
+  },
+  "galleryBanner": {
+    "color": "#0d0d12",
+    "theme": "dark"
   },
   "engines": {
     "vscode": "^1.80.0"
   },
   "categories": [
+    "AI",
+    "Chat",
+    "Programming Languages",
     "Other"
+  ],
+  "keywords": [
+    "gcp",
+    "google cloud",
+    "gemini",
+    "vertex ai",
+    "agent",
+    "chat",
+    "ai assistant",
+    "antigravity",
+    "coding assistant",
+    "gemini 3.7",
+    "developer tools",
+    "copilot",
+    "genai",
+    "llm",
+    "productivity"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -84,8 +117,26 @@
           "default": "global",
           "description": "Google Cloud Region / Location (e.g. 'global', 'us-central1')."
         },
-        "agentPlatform.model": {
+        "agentPlatform.authMode": {
           "order": 3,
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "ide",
+            "gcloud",
+            "serviceAccount"
+          ],
+          "enumDescriptions": [
+            "Auto (Use IDE Google login if available, fallback to gcloud ADC)",
+            "Antigravity IDE (Always use IDE Google Account)",
+            "gcloud ADC (Use separate Google Cloud account authenticated via gcloud)",
+            "Service Account (Use GOOGLE_APPLICATION_CREDENTIALS key file)"
+          ],
+          "description": "Authentication method for Google Cloud Vertex AI."
+        },
+        "agentPlatform.model": {
+          "order": 4,
           "type": "string",
           "default": "gemini-3.7-flash",
           "enum": [
@@ -103,7 +154,7 @@
           "description": "Default Gemini model for Agent conversations."
         },
         "agentPlatform.language": {
-          "order": 4,
+          "order": 5,
           "type": "string",
           "default": "auto",
           "enum": [
@@ -141,13 +192,13 @@
           "description": "Default target language for Agent responses."
         },
         "agentPlatform.monthlyBudgetLimit": {
-          "order": 5,
+          "order": 6,
           "type": "number",
-          "default": 10.0,
+          "default": 10,
           "description": "Monthly budget limit ($) for Gemini API token usage. Requests will be safely blocked when exceeded."
         },
         "agentPlatform.sessionStorageLocation": {
-          "order": 6,
+          "order": 7,
           "type": "string",
           "default": "global",
           "enum": [

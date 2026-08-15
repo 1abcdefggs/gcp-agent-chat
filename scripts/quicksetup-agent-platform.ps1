@@ -1,6 +1,6 @@
 <#
 MIT License
-Copyright (c) 2026 1abcdefggs (https://github.com/1abcdefggs/google-cloud-agent-platform)
+Copyright (c) 2026 1abcdefggs (https://github.com/1abcdefggs/gcp-agent-chat)
 
 .SYNOPSIS
 Quickstart setup script for Google Cloud Agent Platform (Gemini API)

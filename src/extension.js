@@ -5,6 +5,7 @@ const { HookManager } = require('./agent/hook_manager');
 const { SkillManager } = require('./agent/skill_manager');
 const { CostTracker } = require('./cost/cost_tracker');
 const { SessionStorage } = require('./storage/session_storage');
+const { AuthManager } = require('./auth/auth_manager');
 const { RpcClient } = require('./bridge/rpc_client');
 const { AgentPlatformChatViewProvider } = require('./editor/chat_view_provider');
 
@@ -126,13 +127,22 @@ async function checkGcpStatus() {
     const config = vscode.workspace.getConfiguration('agentPlatform');
     const projectId = config.get('projectId') || process.env.GOOGLE_CLOUD_PROJECT || '';
     const location = config.get('location') || process.env.GOOGLE_CLOUD_LOCATION || 'global';
+    const auth = await AuthManager.resolveCredentials();
+
     try {
-        const result = await rpcClient.call('gcp/checkStatus', { projectId, location });
+        const result = await rpcClient.call('gcp/checkStatus', {
+            projectId,
+            location,
+            token: auth.token,
+            account: auth.account,
+            authMode: auth.mode
+        });
         stateManager.updateGcpStatus({
             authenticated: result.authenticated,
             projectId: result.project_id || projectId,
             location: result.location || location,
-            account: result.account,
+            account: result.account || auth.account,
+            authMode: result.auth_mode || auth.mode,
             error: result.error
         });
     } catch (err) {

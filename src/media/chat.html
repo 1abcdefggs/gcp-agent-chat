@@ -15,18 +15,17 @@
             <div class="left-badges">
                 <div class="badge clickable disconnected" id="statusBadge" title="Google Cloud Connection Status">
                     <span class="status-dot"></span>
-                    <span id="statusText">Disconnected</span>
-                </div>
-                <div class="badge cost-badge clickable" id="costBadge"
-                    title="Approximate usage fee (estimated based on Vertex AI token unit price. Different from actual Cloud Billing charges. Click to set budget)">
-                    <svg class="icon-svg" viewBox="0 0 16 16">
-                        <path
-                            d="M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.3 0-1.59-.947-2.51-2.956-3.028l-.722-.187V3.467c1.122.11 1.879.714 2.07 1.616h1.47c-.166-1.6-1.54-2.748-3.54-2.875V1H7.59v1.233c-1.939.23-3.27 1.472-3.27 3.156 0 1.454.966 2.483 2.661 2.917l.61.162v4.031c-1.195-.17-1.939-.821-2.12-1.718H4zm3.59-6.937c-.773.11-1.393.596-1.393 1.34 0 .68.498 1.134 1.393 1.353V3.844zm1.043 7.822v-3.09l.836.216c.863.224 1.442.693 1.442 1.444 0 .891-.652 1.392-1.558 1.488l-.72-.058z" />
-                    </svg>
-                    <span id="costText">~$0.00 / $10.00</span>
+                    <span id="statusText">GCP : Disconnected</span>
                 </div>
             </div>
             <div class="right-badges">
+                <select id="langSelect" title="Target Language"></select>
+                <button class="icon-btn" id="newChatBtn" title="New Chat Session">
+                    <svg viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>
+                </button>
+                <button class="icon-btn" id="historyBtn" title="Session History & Switcher">
+                    <svg viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1a7 7 0 1 0 6.83 5.49a.5.5 0 0 0-.98-.204A6 6 0 1 1 8 2c.408 0 .805.04 1.189.117L8.146 3.164a.5.5 0 0 0 .708.707l2-2a.5.5 0 0 0 0-.707l-2-2a.5.5 0 1 0-.708.707l.369.348z"/><path d="M8 3.5a.5.5 0 0 0-.5.5v4a.5.5 0 0 0 .246.432l3 1.732a.5.5 0 1 0 .508-.864L8.5 7.732V4a.5.5 0 0 0-.5-.5z"/></svg>
+                </button>
                 <button class="icon-btn" id="exportBtn" title="Export conversation to Markdown (.agents/artifacts/)">
                     <svg viewBox="0 0 16 16">
                         <path fill-rule="evenodd"
@@ -44,13 +43,7 @@
             </div>
         </div>
         <div class="bottom-row">
-            <div class="model-select-wrapper">
-                <select id="modelSelect" title="LLM Model"></select>
-            </div>
-            <div class="lang-select-wrapper">
-                <span class="lang-label">Language:</span>
-                <select id="langSelect" title="Target Language"></select>
-            </div>
+            <select id="modelSelect" title="LLM Model"></select>
         </div>
     </div>
 

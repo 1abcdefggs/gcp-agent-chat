@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { EditorBridge } = require('./editor_bridge');
 const { ImageHandler } = require('../media/image_handler');
+const { AuthManager } = require('../auth/auth_manager');
 
 class AgentPlatformChatViewProvider {
     constructor(extensionUri, state, rpc, hooks, skills, cost, storage, checkGcpStatusFn) {
@@ -55,7 +56,9 @@ class AgentPlatformChatViewProvider {
                     break;
                 }
                 case 'checkStatus': {
-                    if (this._checkGcpStatus) await this._checkGcpStatus();
+                    await AuthManager.showAuthQuickPick(this._state.gcpStatus, () => {
+                        if (this._checkGcpStatus) this._checkGcpStatus();
+                    });
                     break;
                 }
                 case 'openSettings': {
@@ -88,6 +91,36 @@ class AgentPlatformChatViewProvider {
                 }
                 case 'exportMarkdown': {
                     this._storage.exportToMarkdown(this._state.messages);
+                    break;
+                }
+                case 'newSession': {
+                    this._storage.newSession();
+                    this._state.clearMessages();
+                    vscode.window.showInformationMessage('Started a new chat session.');
+                    break;
+                }
+                case 'openSessionHistory': {
+                    const sessions = this._storage.listSessions();
+                    if (!sessions || sessions.length === 0) {
+                        vscode.window.showInformationMessage('No saved chat sessions found.');
+                        break;
+                    }
+                    const items = sessions.map(s => ({
+                        label: `$(comment-discussion) ${s.preview}`,
+                        description: `${s.messageCount} msgs`,
+                        detail: `Session: ${s.sessionId} | ${new Date(s.updatedAt).toLocaleString()}`,
+                        sessionId: s.sessionId
+                    }));
+
+                    const selected = await vscode.window.showQuickPick(items, {
+                        placeHolder: 'Select a past session to resume...'
+                    });
+
+                    if (selected && selected.sessionId) {
+                        const msgs = this._storage.loadSession(selected.sessionId);
+                        this._state.setMessages(msgs);
+                        vscode.window.showInformationMessage(`Loaded session: ${selected.sessionId}`);
+                    }
                     break;
                 }
             }
@@ -153,6 +186,8 @@ class AgentPlatformChatViewProvider {
             const langObj = require('../config/constants').SUPPORTED_LANGUAGES.find(l => l.id === targetLangId);
             const targetLangName = langObj ? langObj.name : 'Auto';
 
+            const auth = await AuthManager.resolveCredentials();
+
             const response = await this._rpc.call('chat/sendMessage', {
                 prompt: effectivePrompt,
                 model: model || this._state.selectedModel,
@@ -160,7 +195,10 @@ class AgentPlatformChatViewProvider {
                 languageName: targetLangName,
                 images: processedImages,
                 projectId,
-                location
+                location,
+                token: auth.token,
+                account: auth.account,
+                authMode: auth.mode
             });
 
             if (!response || !response.success) {

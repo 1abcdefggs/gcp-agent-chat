@@ -4,8 +4,9 @@
 
     const chatContainer = $('chatContainer'), promptInput = $('promptInput'), sendBtn = $('sendBtn');
     const modelSelect = $('modelSelect'), langSelect = $('langSelect'), settingsBtn = $('settingsBtn');
-    const exportBtn = $('exportBtn'), statusBadge = $('statusBadge'), statusText = $('statusText');
-    const costBadge = $('costBadge'), costText = $('costText'), fileInput = $('fileInput'), attachBtn = $('attachBtn'), previewBar = $('imagePreviewBar');
+    const newChatBtn = $('newChatBtn'), historyBtn = $('historyBtn'), exportBtn = $('exportBtn');
+    const statusBadge = $('statusBadge'), statusText = $('statusText'), costBadge = $('costBadge'), costText = $('costText');
+    const fileInput = $('fileInput'), attachBtn = $('attachBtn'), previewBar = $('imagePreviewBar');
 
     let attachedImages = [];
 
@@ -20,8 +21,8 @@
     const updateGcpStatusUI = st => {
         const isOk = st?.authenticated && st?.projectId;
         statusBadge.className = `badge clickable ${isOk ? 'connected' : 'disconnected'}`;
-        statusText.textContent = isOk ? st.projectId : 'Disconnected';
-        statusBadge.title = isOk ? `Connected: ${st.projectId} (${st.account || 'ADC'})` : `${st?.error || 'Project ID not configured'} (Click to retry)`;
+        statusText.textContent = isOk ? 'GCP : Connected' : 'GCP : Disconnected';
+        statusBadge.title = isOk ? 'GCP : Connected (Click for account/project details)' : `${st?.error || 'Project ID not configured'} (Click to connect)`;
     };
 
     const appendMessage = (text, sender, status, id) => {
@@ -92,8 +93,10 @@
     promptInput.addEventListener('input', adjustHeight);
     promptInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
     sendBtn.addEventListener('click', send);
+    newChatBtn.addEventListener('click', () => vscode.postMessage({ type: 'newSession' }));
+    historyBtn.addEventListener('click', () => vscode.postMessage({ type: 'openSessionHistory' }));
     settingsBtn.addEventListener('click', () => vscode.postMessage({ type: 'openSettings' }));
-    costBadge.addEventListener('click', () => vscode.postMessage({ type: 'openSettings' }));
+    if (costBadge) costBadge.addEventListener('click', () => vscode.postMessage({ type: 'openSettings' }));
     exportBtn.addEventListener('click', () => vscode.postMessage({ type: 'exportMarkdown' }));
     statusBadge.addEventListener('click', () => vscode.postMessage({ type: 'checkStatus' }));
     attachBtn.onclick = () => fileInput.click();
@@ -131,11 +134,13 @@
                 updateGcpStatusUI(msg.gcpStatus);
                 break;
             case 'costUpdate': {
-                const cost = (msg.totalCost !== undefined ? msg.totalCost : (msg.dailyCost || 0)).toFixed(4);
-                const budget = (msg.budgetLimit !== undefined ? msg.budgetLimit : 10.0).toFixed(2);
-                costText.textContent = `~$${cost} / $${budget}`;
-                costBadge.title = `【Approximate cost】 ~$${cost} / budget: $${budget}\n※Estimated usage fees based on Vertex AI token unit prices. Different from actual Cloud Billing charges.(Click to set budget)`;
-                costBadge.style.color = msg.isOverBudget ? 'var(--error-color)' : '';
+                if (costText && costBadge) {
+                    const cost = (msg.totalCost !== undefined ? msg.totalCost : (msg.dailyCost || 0)).toFixed(4);
+                    const budget = (msg.budgetLimit !== undefined ? msg.budgetLimit : 10.0).toFixed(2);
+                    costText.textContent = `~$${cost} / $${budget}`;
+                    costBadge.title = `【Approximate cost】 ~$${cost} / budget: $${budget}\n※Estimated usage fees based on Vertex AI token unit prices. Different from actual Cloud Billing charges.(Click to set budget)`;
+                    costBadge.style.color = msg.isOverBudget ? 'var(--error-color)' : '';
+                }
                 break;
             }
             case 'fillPrompt':

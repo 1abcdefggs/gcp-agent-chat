@@ -42,6 +42,79 @@ class SessionStorage {
         }
     }
 
+    newSession(sessionId = null) {
+        this.sessionId = sessionId || `session_${Date.now()}`;
+        this.jsonlPath = path.join(this.sessionDir, `${this.sessionId}.jsonl`);
+        this._ensureDirectory();
+        return this.sessionId;
+    }
+
+    /** List all stored sessions with metadata */
+    listSessions() {
+        try {
+            if (!fs.existsSync(this.sessionDir)) return [];
+            const files = fs.readdirSync(this.sessionDir).filter(f => f.endsWith('.jsonl'));
+            const sessions = [];
+
+            for (const file of files) {
+                const filePath = path.join(this.sessionDir, file);
+                const stat = fs.statSync(filePath);
+                const sid = file.replace('.jsonl', '');
+                let preview = 'Empty conversation';
+                let messageCount = 0;
+
+                try {
+                    const content = fs.readFileSync(filePath, 'utf8');
+                    const lines = content.trim().split('\n').filter(Boolean);
+                    messageCount = lines.length;
+                    if (lines.length > 0) {
+                        const firstMsg = JSON.parse(lines[0]);
+                        preview = (firstMsg.text || '').replace(/\s+/g, ' ').slice(0, 60);
+                        if (firstMsg.text && firstMsg.text.length > 60) preview += '...';
+                    }
+                } catch { }
+
+                sessions.push({
+                    sessionId: sid,
+                    filename: file,
+                    filePath,
+                    preview,
+                    messageCount,
+                    updatedAt: stat.mtime
+                });
+            }
+
+            return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+        } catch (err) {
+            console.error('Failed to list sessions:', err);
+            return [];
+        }
+    }
+
+    /** Load all messages from a specific session file */
+    loadSession(sessionId) {
+        try {
+            const targetPath = path.join(this.sessionDir, `${sessionId}.jsonl`);
+            if (!fs.existsSync(targetPath)) return [];
+            const content = fs.readFileSync(targetPath, 'utf8');
+            const lines = content.trim().split('\n').filter(Boolean);
+            const messages = [];
+
+            for (const line of lines) {
+                try {
+                    messages.push(JSON.parse(line));
+                } catch { }
+            }
+
+            this.sessionId = sessionId;
+            this.jsonlPath = targetPath;
+            return messages;
+        } catch (err) {
+            console.error(`Failed to load session ${sessionId}:`, err);
+            return [];
+        }
+    }
+
     /** Export conversation as Markdown (Managed Artifact) */
     exportToMarkdown(messages) {
         try {

@@ -53,6 +53,18 @@ class ChatStateManager extends EventEmitter {
         return message;
     }
 
+    /** Clear all messages (new session) and sync webviews */
+    clearMessages() {
+        this.messages = [];
+        this.broadcast({ type: 'syncState', messages: [] });
+    }
+
+    /** Replace messages (load session) and sync webviews */
+    setMessages(messages) {
+        this.messages = Array.isArray(messages) ? messages : [];
+        this.broadcast({ type: 'syncState', messages: this.messages });
+    }
+
     /** Update message status (loading, complete, error, etc.) */
     updateMessage(id, updates) {
         const msg = this.messages.find(m => m.id === id);

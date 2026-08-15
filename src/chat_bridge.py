@@ -14,16 +14,26 @@ def check_gcp_status(params=None):
         params = {}
     project_id = params.get("projectId") or os.environ.get("GOOGLE_CLOUD_PROJECT")
     location = params.get("location") or os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+    token = params.get("token")
+    auth_mode = params.get("authMode", "auto")
 
-    account = "ADC Credentials"
-    try:
-        import google.auth
-        credentials, default_project = google.auth.default()
-        if not project_id and default_project:
-            project_id = default_project
-        account = getattr(credentials, "service_account_email", None) or getattr(credentials, "_account", None) or "Google Cloud Authenticated"
-    except Exception:
-        account = "ADC Initialized"
+    account = "Google Cloud Authenticated"
+    authenticated = False
+
+    if token:
+        account = params.get("account") or "Antigravity IDE User"
+        authenticated = True
+    else:
+        try:
+            import google.auth
+            credentials, default_project = google.auth.default()
+            if not project_id and default_project:
+                project_id = default_project
+            account = getattr(credentials, "service_account_email", None) or getattr(credentials, "_account", None) or "gcloud ADC Account"
+            authenticated = True
+        except Exception:
+            account = "Not Authenticated"
+            authenticated = False
 
     if not project_id:
         try:
@@ -37,9 +47,10 @@ def check_gcp_status(params=None):
     if not project_id:
         return {
             "success": False,
-            "authenticated": False,
+            "authenticated": authenticated,
             "project_id": None,
             "location": location,
+            "account": account,
             "error": "Google Cloud Project ID is not configured. Click Settings to set agentPlatform.projectId."
         }
 
@@ -48,10 +59,11 @@ def check_gcp_status(params=None):
 
     return {
         "success": True,
-        "authenticated": True,
+        "authenticated": authenticated,
         "project_id": project_id,
         "location": location,
-        "account": account
+        "account": account,
+        "auth_mode": auth_mode
     }
 
 def read_file(filepath: str) -> str:
@@ -132,9 +144,19 @@ def handle_chat_message(params):
     from google import genai
     from google.genai.types import HttpOptions, GenerateContentConfig
 
+    token = params.get("token")
+    credentials = None
+    if token:
+        try:
+            from google.oauth2.credentials import Credentials
+            credentials = Credentials(token=token)
+        except Exception:
+            pass
+
     client = genai.Client(
         project=project_id,
         location=location,
+        credentials=credentials,
         http_options=HttpOptions(api_version="v1")
     )
 
@@ -167,27 +189,80 @@ def handle_chat_message(params):
                 raw_bytes = base64.b64decode(b64_data)
                 contents.append(types.Part.from_bytes(data=raw_bytes, mime_type=mime))
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=contents,
-        config=GenerateContentConfig(
-            system_instruction=sys_prompt,
-            tools=tools
-        )
-    )
+    tool_map = {
+        "read_file": read_file,
+        "list_files": list_files,
+        "run_command": run_command
+    }
 
-    usage = {}
-    if hasattr(response, 'usage_metadata') and response.usage_metadata:
-        usage = {
-            "prompt_tokens": getattr(response.usage_metadata, 'prompt_token_count', 0),
-            "candidates_tokens": getattr(response.usage_metadata, 'candidates_token_count', 0)
-        }
+    accumulated_usage = {"prompt_tokens": 0, "candidates_tokens": 0}
+    final_text = ""
+    max_turns = 5
+
+    for turn in range(max_turns):
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=GenerateContentConfig(
+                system_instruction=sys_prompt,
+                tools=tools
+            )
+        )
+
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            accumulated_usage["prompt_tokens"] += getattr(response.usage_metadata, 'prompt_token_count', 0)
+            accumulated_usage["candidates_tokens"] += getattr(response.usage_metadata, 'candidates_token_count', 0)
+
+        # Check for function calls in response
+        function_calls = getattr(response, 'function_calls', None)
+        if not function_calls and hasattr(response, 'candidates') and response.candidates:
+            for cand in response.candidates:
+                if getattr(cand, 'content', None) and getattr(cand.content, 'parts', None):
+                    for part in cand.content.parts:
+                        if getattr(part, 'function_call', None):
+                            if function_calls is None:
+                                function_calls = []
+                            function_calls.append(part.function_call)
+
+        if function_calls:
+            # Model requested tool calls
+            if hasattr(response, 'candidates') and response.candidates and response.candidates[0].content:
+                contents.append(response.candidates[0].content)
+
+            response_parts = []
+            for fc in function_calls:
+                fn_name = getattr(fc, 'name', '')
+                fn_args = getattr(fc, 'args', {}) or {}
+                if isinstance(fn_args, dict):
+                    fn_result = tool_map[fn_name](**fn_args) if fn_name in tool_map else f"Unknown tool: {fn_name}"
+                else:
+                    fn_result = f"Invalid arguments for {fn_name}"
+
+                response_parts.append(
+                    types.Part.from_function_response(
+                        name=fn_name,
+                        response={"result": str(fn_result)}
+                    )
+                )
+
+            contents.append(types.Content(role="tool", parts=response_parts))
+        else:
+            # No tool calls: extract text
+            if hasattr(response, 'text') and response.text:
+                final_text = response.text
+            elif hasattr(response, 'candidates') and response.candidates:
+                for cand in response.candidates:
+                    if getattr(cand, 'content', None) and getattr(cand.content, 'parts', None):
+                        for part in cand.content.parts:
+                            if getattr(part, 'text', None):
+                                final_text += part.text
+            break
 
     return {
         "success": True,
         "type": "text",
-        "text": response.text or "",
-        "usage": usage
+        "text": final_text or "(No text returned)",
+        "usage": accumulated_usage
     }
 
 def main():
