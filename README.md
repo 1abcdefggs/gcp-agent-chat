@@ -1,8 +1,24 @@
 # GCP Agent Chat for Antigravity IDE & VS Code
 
-A native VS Code / Antigravity IDE extension connecting directly to **Google Cloud Vertex AI (Gemini 3.7-flash)** with built-in security guardrails, multi-view state synchronization, and 115 external lifecycle skills.
+> **Enterprise Google Cloud Vertex AI (Gemini 3.7-flash) Assistant for VS Code & Antigravity IDE**  
+> *Seamless zero-CLI IDE Google login, autonomous multi-turn tool loops, pre-tool security firewalls, and instant fallback when default IDE quotas are exhausted.*
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version: 0.5.0](https://img.shields.io/badge/Version-0.5.0-green.svg)](package.json)
+[![Gemini: 3.7--Flash](https://img.shields.io/badge/Google%20Cloud-Vertex%20AI-4285F4.svg)](https://cloud.google.com/vertex-ai)
 
 ![GCP Agent Chat UI](./asset/chat-v0.2.0.webp)
+
+---
+
+## ⚡ Instant Quota Fallback & Direct Enterprise Connection
+
+> **Never Stop Coding**: When your default Antigravity IDE / Gemini CLI daily quota is exhausted or unavailable, **GCP Agent Chat** seamlessly switches your development workflow to dedicated **Google Cloud Vertex AI** capacity using your own enterprise project quota.
+
+* 🔑 **Zero-CLI IDE Login**: Sign in with your Antigravity IDE Google Account and start chatting instantly.
+* ⚡ **Uninterrupted Capacity**: Direct connection to Vertex AI (`gemini-3.7-flash`, `gemini-2.5-pro`) with pay-as-you-go cloud quotas.
+* 🛠️ **Autonomous Tool Loop**: Gemini autonomously inspects workspace files, runs diagnostics, and crafts complete solutions.
+* 🛡️ **Zero-Token Local Security Guardrails**: PreToolUse security firewall intercepts token leaks and protects `.env` secrets.
 
 ---
 
@@ -132,6 +148,15 @@ You can connect using any of the following methods:
 | **Open Settings** | `⚙` (Header Button) | Opens `agentPlatform` configuration settings |
 | **Attach Screenshots** | `📎` (Toolbar / Paste) | Upload or paste images (PNG, JPEG, WEBP) into the prompt |
 | **Slash Commands** | Type `/` in input | Triggers autocomplete for 115 Antigravity workflow skills |
+
+### 4. Standalone Connection Test (Terminal Verification)
+
+If you wish to verify your Google Cloud Vertex AI connectivity and ADC quota directly in your terminal before launching the IDE chat, run the included verification script:
+
+```powershell
+./scripts/quicksetup-agent-platform.ps1
+```
+This script executes a lightweight Python verification probe to validate API quotas, Project ID resolution, and Gemini 3.7-flash connectivity.
 
 ---
 
