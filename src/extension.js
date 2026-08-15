@@ -1,23 +1,93 @@
 const vscode = require('vscode');
-const { execFile } = require('child_process');
 const path = require('path');
-const fs = require('fs');
+
+const { ChatStateManager } = require('./state/chat_state_manager');
+const { RpcClient } = require('./bridge/rpc_client');
+const { HookManager } = require('./agent/hook_manager');
+const { SkillManager } = require('./agent/skill_manager');
+
+let rpcClient = null;
+let stateManager = null;
+let hookManager = null;
+let skillManager = null;
 
 function activate(context) {
-    const provider = new AgentPlatformChatViewProvider(context.extensionUri);
+    stateManager = new ChatStateManager();
+    hookManager = new HookManager();
+    skillManager = new SkillManager();
 
+    // Resolve path to python bridge script
+    const bridgeScript = path.join(__dirname, 'chat_bridge.py');
+    const customEnv = getEnv();
+
+    // Initialize persistent JSON-RPC client
+    rpcClient = new RpcClient(bridgeScript, {
+        cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || __dirname,
+        env: customEnv
+    });
+
+    const provider = new AgentPlatformChatViewProvider(context.extensionUri, stateManager, rpcClient, hookManager, skillManager);
+
+    // Register WebviewViewProvider for both Primary (left) and Secondary (right) Sidebars
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider('agent-platform-chat-view', provider)
+        vscode.window.registerWebviewViewProvider('agent-platform-chat-view', provider),
+        vscode.window.registerWebviewViewProvider('agent-platform-chat-view-secondary', provider)
     );
 
+    // Initial GCP connection status verification
+    checkGcpStatus();
+
+    // Refresh environment when settings change
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider('agent-platform-chat-view-secondary', provider)
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('agentPlatform')) {
+                checkGcpStatus();
+            }
+        })
     );
 }
 
+function getEnv() {
+    const config = vscode.workspace.getConfiguration('agentPlatform');
+    const customEnv = Object.assign({}, process.env);
+    const configuredProjectId = config.get('projectId');
+    const configuredLocation = config.get('location');
+
+    if (configuredProjectId) {
+        customEnv.GOOGLE_CLOUD_PROJECT = configuredProjectId;
+    }
+    if (configuredLocation) {
+        customEnv.GOOGLE_CLOUD_LOCATION = configuredLocation;
+    }
+    return customEnv;
+}
+
+async function checkGcpStatus() {
+    if (!rpcClient) return;
+    try {
+        const result = await rpcClient.call('gcp/checkStatus', {});
+        stateManager.updateGcpStatus({
+            authenticated: result.authenticated,
+            projectId: result.project_id,
+            location: result.location,
+            account: result.account,
+            error: result.error
+        });
+    } catch (err) {
+        stateManager.updateGcpStatus({
+            authenticated: false,
+            error: err.message || 'Failed to check GCP status'
+        });
+    }
+}
+
 class AgentPlatformChatViewProvider {
-    constructor(extensionUri) {
+    constructor(extensionUri, state, rpc, hooks, skills) {
         this._extensionUri = extensionUri;
+        this._state = state;
+        this._rpc = rpc;
+        this._hooks = hooks;
+        this._skills = skills;
     }
 
     resolveWebviewView(webviewView, context, _token) {
@@ -30,122 +100,92 @@ class AgentPlatformChatViewProvider {
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
+        // Register Webview with StateManager for cross-sidebar synchronization
+        this._state.registerWebview(webviewView.webview);
+
+        webviewView.onDidDispose(() => {
+            this._state.unregisterWebview(webviewView.webview);
+        });
+
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
                 case 'sendMessage': {
-                    this._handleUserMessage(data.prompt, data.model, data.language);
+                    await this._handleUserMessage(data.prompt, data.model, data.language);
+                    break;
+                }
+                case 'checkStatus': {
+                    await checkGcpStatus();
                     break;
                 }
                 case 'openSettings': {
                     vscode.commands.executeCommand('workbench.action.openSettings', 'agentPlatform');
                     break;
                 }
-                case 'checkStatus': {
-                    this._checkGcpStatus();
+                case 'getSkillSuggestions': {
+                    const suggestions = this._skills.getSuggestions(data.query);
+                    webviewView.webview.postMessage({
+                        type: 'skillSuggestions',
+                        suggestions
+                    });
                     break;
                 }
             }
         });
-
-        // Auto-check GCP connection status on load
-        this._checkGcpStatus();
     }
 
-    _getEnv() {
-        const config = vscode.workspace.getConfiguration('agentPlatform');
-        const customEnv = Object.assign({}, process.env);
-        const configuredProjectId = config.get('projectId');
-        const configuredLocation = config.get('location');
+    async _handleUserMessage(prompt, model, language) {
+        if (!prompt || !prompt.trim()) return;
 
-        if (configuredProjectId) {
-            customEnv.GOOGLE_CLOUD_PROJECT = configuredProjectId;
+        // 1. Add user message to StateManager and broadcast immediately
+        this._state.addMessage('user', prompt);
+
+        // 2. PreToolUse security verification via HookManager
+        const hookCheck = this._hooks.verifyPreToolUse(prompt);
+        if (!hookCheck.allowed) {
+            this._state.addMessage('system', hookCheck.reason);
+            return;
         }
-        if (configuredLocation) {
-            customEnv.GOOGLE_CLOUD_LOCATION = configuredLocation;
+
+        // 3. Slash command (Skill) detection and prompt injection
+        let effectivePrompt = prompt;
+        let activeSkill = null;
+        if (prompt.startsWith('/')) {
+            const skillName = prompt.split(' ')[0].replace('/', '');
+            activeSkill = this._skills.getSkill(skillName);
+            if (activeSkill) {
+                effectivePrompt = `[Applied Skill: ${activeSkill.name}]\n${activeSkill.content}\n\n[User Instruction]:\n${prompt}`;
+            }
         }
-        return customEnv;
-    }
 
-    _getBridgeScript(workspaceFolder) {
-        const candidates = [
-            path.join(__dirname, 'chat_bridge.py'),
-            path.join(workspaceFolder, 'src', 'chat_bridge.py'),
-            path.join(workspaceFolder, 'chat_bridge.py')
-        ];
-        return candidates.find(p => fs.existsSync(p)) || candidates[0];
-    }
+        // 4. Add loading agent message
+        const agentMsg = this._state.addMessage('agent', '...', { status: 'loading' });
 
-    _checkGcpStatus() {
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || __dirname;
-        const bridgeScript = this._getBridgeScript(workspaceFolder);
-        const customEnv = this._getEnv();
+        try {
+            // 5. Dispatch request to Python JSON-RPC daemon
+            const response = await this._rpc.call('chat/sendMessage', {
+                prompt: effectivePrompt,
+                model: model || this._state.selectedModel,
+                language: language || this._state.targetLanguage
+            });
 
-        execFile('python', [bridgeScript, '--status'], { cwd: workspaceFolder, env: customEnv }, (error, stdout) => {
-            if (error) {
-                this._view?.webview.postMessage({
-                    type: 'gcpStatus',
-                    authenticated: false,
-                    projectId: customEnv.GOOGLE_CLOUD_PROJECT || null,
-                    error: 'Bridge script error'
+            if (response && response.text) {
+                this._state.updateMessage(agentMsg.id, {
+                    text: response.text,
+                    status: 'complete',
+                    usage: response.usage
                 });
-                return;
-            }
-
-            try {
-                const result = JSON.parse(stdout.trim());
-                this._view?.webview.postMessage({
-                    type: 'gcpStatus',
-                    authenticated: result.authenticated,
-                    projectId: result.project_id,
-                    account: result.account,
-                    error: result.error
-                });
-            } catch (e) {
-                this._view?.webview.postMessage({
-                    type: 'gcpStatus',
-                    authenticated: false,
-                    projectId: customEnv.GOOGLE_CLOUD_PROJECT || null,
-                    error: 'Parsing status error'
+            } else {
+                this._state.updateMessage(agentMsg.id, {
+                    text: 'Failed to receive a valid response.',
+                    status: 'error'
                 });
             }
-        });
-    }
-
-    _handleUserMessage(prompt, model, language) {
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || __dirname;
-        const bridgeScript = this._getBridgeScript(workspaceFolder);
-        const config = vscode.workspace.getConfiguration('agentPlatform');
-        const defaultLang = config.get('language') || 'auto';
-        const targetLang = language || defaultLang;
-
-        const customEnv = this._getEnv();
-
-        execFile('python', [bridgeScript, prompt, model, targetLang], { cwd: workspaceFolder, env: customEnv }, (error, stdout, stderr) => {
-            if (error) {
-                this._view?.webview.postMessage({
-                    type: 'addResponse',
-                    success: false,
-                    error: stderr || error.message || 'Execution error'
-                });
-                return;
-            }
-
-            try {
-                const result = JSON.parse(stdout.trim());
-                this._view?.webview.postMessage({
-                    type: 'addResponse',
-                    success: result.success,
-                    text: result.text,
-                    error: result.error
-                });
-            } catch (e) {
-                this._view?.webview.postMessage({
-                    type: 'addResponse',
-                    success: false,
-                    error: 'Failed to parse JSON response: ' + stdout
-                });
-            }
-        });
+        } catch (err) {
+            this._state.updateMessage(agentMsg.id, {
+                text: `Error: ${err.message || 'Unknown RPC Error'}`,
+                status: 'error'
+            });
+        }
     }
 
     _getHtmlForWebview(webview) {
@@ -167,14 +207,15 @@ class AgentPlatformChatViewProvider {
             --muted-text: #a6adc8;
             --success-color: #a6e3a1;
             --error-color: #f38ba8;
+            --warning-color: #f9e2af;
         }
 
         body {
-            font-family: var(--vscode-font-family, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
+            font-family: var(--vscode-font-family, 'Segoe UI', sans-serif);
             background-color: var(--vscode-sideBar-background, var(--bg-color));
             color: var(--vscode-sideBar-foreground, var(--text-color));
             margin: 0;
-            padding: 12px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             height: 100vh;
@@ -187,70 +228,69 @@ class AgentPlatformChatViewProvider {
             gap: 8px;
             padding-bottom: 8px;
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .top-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        .title-container {
-            display: flex;
-            align-items: center;
             gap: 6px;
         }
 
-        .title-container h3 {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-
-        .actions-container {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .status-badge {
+        .project-badge {
             display: inline-flex;
             align-items: center;
             gap: 5px;
             padding: 3px 8px;
             border-radius: 12px;
             font-size: 0.72rem;
-            font-weight: 500;
+            font-weight: 600;
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid var(--border-color);
             cursor: pointer;
             user-select: none;
-            transition: background 0.2s;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 60%;
         }
 
-        .status-badge:hover {
-            background: rgba(255, 255, 255, 0.12);
-        }
-
-        .status-dot {
+        .project-badge .status-dot {
             width: 7px;
             height: 7px;
             border-radius: 50%;
             background-color: #888;
+            flex-shrink: 0;
         }
 
-        .status-badge.connected .status-dot {
+        .project-badge.connected .status-dot {
             background-color: var(--success-color);
             box-shadow: 0 0 6px var(--success-color);
         }
 
-        .status-badge.disconnected .status-dot {
+        .project-badge.disconnected .status-dot {
             background-color: var(--error-color);
             box-shadow: 0 0 6px var(--error-color);
         }
 
-        .icon-button {
+        .right-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .model-select {
+            background: var(--vscode-dropdown-background, #313244);
+            color: var(--vscode-dropdown-foreground, #cdd6f4);
+            border: 1px solid var(--border-color);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            outline: none;
+        }
+
+        .icon-btn {
             background: transparent;
             color: var(--vscode-sideBar-foreground, var(--text-color));
             border: none;
@@ -261,36 +301,9 @@ class AgentPlatformChatViewProvider {
             justify-content: center;
             cursor: pointer;
             opacity: 0.8;
-            transition: opacity 0.2s, background 0.2s;
         }
-
-        .icon-button:hover {
-            opacity: 1;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .icon-button svg {
-            width: 16px;
-            height: 16px;
-            fill: currentColor;
-        }
-
-        .controls-row {
-            display: flex;
-            gap: 4px;
-            width: 100%;
-        }
-
-        select {
-            flex: 1;
-            background: var(--vscode-dropdown-background, #313244);
-            color: var(--vscode-dropdown-foreground, #cdd6f4);
-            border: 1px solid var(--border-color);
-            padding: 4px 6px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            outline: none;
-        }
+        .icon-btn:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+        .icon-btn svg { width: 14px; height: 14px; fill: currentColor; }
 
         .chat-container {
             flex: 1;
@@ -306,7 +319,7 @@ class AgentPlatformChatViewProvider {
             padding: 8px 12px;
             border-radius: 8px;
             font-size: 0.85rem;
-            line-height: 1.4;
+            line-height: 1.45;
             word-wrap: break-word;
             white-space: pre-wrap;
             box-shadow: 0 2px 4px rgba(0,0,0,0.15);
@@ -327,20 +340,65 @@ class AgentPlatformChatViewProvider {
             border: 1px solid var(--border-color);
         }
 
+        .message.system {
+            align-self: center;
+            background: rgba(249, 226, 175, 0.12);
+            color: var(--warning-color);
+            border: 1px solid var(--warning-color);
+            font-size: 0.78rem;
+        }
+
         .message.error {
             align-self: center;
             background: rgba(243, 139, 168, 0.15);
-            color: #f38ba8;
-            border: 1px solid #f38ba8;
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
             font-size: 0.8rem;
         }
+
+        .input-wrapper {
+            position: relative;
+            margin-top: 8px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: #181825;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .autocomplete-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .autocomplete-item:hover, .autocomplete-item.selected {
+            background: rgba(137, 180, 250, 0.15);
+        }
+
+        .autocomplete-item .name { font-weight: bold; color: var(--primary-accent); }
+        .autocomplete-item .desc { font-size: 0.72rem; color: var(--muted-text); }
 
         .input-area {
             display: flex;
             gap: 6px;
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px solid var(--border-color);
         }
 
         textarea {
@@ -357,9 +415,7 @@ class AgentPlatformChatViewProvider {
             height: 38px;
         }
 
-        textarea:focus {
-            border-color: var(--primary-accent);
-        }
+        textarea:focus { border-color: var(--primary-accent); }
 
         button.send-btn {
             background: #89b4fa;
@@ -369,77 +425,43 @@ class AgentPlatformChatViewProvider {
             padding: 0 12px;
             font-weight: bold;
             cursor: pointer;
-            transition: opacity 0.2s;
         }
 
-        button.send-btn:hover {
-            opacity: 0.85;
-        }
-
-        button.send-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        .loading {
-            font-size: 0.8rem;
-            color: var(--muted-text);
-            font-style: italic;
-            margin-left: 6px;
-        }
+        button.send-btn:hover { opacity: 0.85; }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="top-row">
-            <div class="title-container">
-                <h3>☁️ Agent Platform</h3>
+            <!-- PROJECT ID Label Badge -->
+            <div class="project-badge disconnected" id="projectBadge" title="Click to refresh GCP Status">
+                <span class="status-dot"></span>
+                <span id="projectLabel">PROJECT ID: None</span>
             </div>
-            <div class="actions-container">
-                <div class="status-badge disconnected" id="statusBadge" title="Click to refresh GCP Connection Status">
-                    <span class="status-dot"></span>
-                    <span id="statusText">Connecting...</span>
-                </div>
-                <button class="icon-button" id="settingsBtn" title="Open Settings">
-                    <svg viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M9.1 0.1c-.2-.1-.5-.1-.7 0l-.8.4c-.2.1-.4.3-.5.5L6.8 2c-.3.1-.6.3-.9.4l-.8-.3c-.3-.1-.6 0-.8.2L3.5 3.1c-.2.2-.3.5-.2.8l.3.8c-.2.3-.4.6-.5.9l-.8.3c-.3.1-.5.3-.5.6v1c0 .3.2.5.5.6l.8.3c.1.3.3.6.5.9l-.3.8c-.1.3 0 .6.2.8l.8.8c.2.2.5.3.8.2l.8-.3c.3.2.6.4.9.5l.3.8c.1.3.3.5.6.5h1c.3 0 .5-.2.6-.5l.3-.8c.3-.1.6-.3.9-.5l.8.3c.3.1.6 0 .8-.2l.8-.8c.2-.2.3-.5.2-.8l-.3-.8c.2-.3.4-.6.5-.9l.8-.3c.3-.1.5-.3.5-.6v-1c0-.3-.2-.5-.5-.6l-.8-.3c-.1-.3-.3-.6-.5-.9l.3-.8c.1-.3 0-.6-.2-.8l-.8-.8c-.2-.2-.5-.3-.8-.2l-.8.3c-.3-.2-.6-.4-.9-.5l-.3-.8c-.1-.2-.3-.4-.5-.5l-.8-.4zM8 10.5c-1.4 0-2.5-1.1-2.5-2.5s1.1-2.5 2.5-2.5 2.5 1.1 2.5 2.5-1.1 2.5-2.5 2.5z"/>
-                    </svg>
+            <div class="right-controls">
+                <select class="model-select" id="modelSelect" title="Select Model">
+                    <option value="gemini-3.7-flash" selected>gemini-3.7-flash</option>
+                    <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+                    <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                    <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                </select>
+                <button class="icon-btn" id="settingsBtn" title="Settings">
+                    <svg viewBox="0 0 16 16"><path d="M9.1 4.4L8.6 2H7.4l-.5 2.4-.7.3-2-1.3-.9.8 1.3 2-.2.7-2.5.5v1.2l2.5.5.3.8-1.4 1.9.8.8 2-1.3.8.3.4 2.5h1.2l.5-2.5.7-.3 2 1.3.8-.8-1.3-2 .3-.7 2.4-.5V7.4l-2.4-.5-.3-.7 1.3-2-.8-.8-2 1.3-.7-.3zM8 10c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
                 </button>
             </div>
-        </div>
-        <div class="controls-row">
-            <select id="langSelect" title="Language">
-                <option value="auto" selected>🌐 Auto</option>
-                <option value="ja">🇯🇵 日本語</option>
-                <option value="en">🇺🇸 English</option>
-                <option value="es">🇪🇸 Español</option>
-                <option value="zh">🇨🇳 中文</option>
-                <option value="de">🇩🇪 Deutsch</option>
-                <option value="fr">🇫🇷 Français</option>
-                <option value="it">🇮🇹 Italiano</option>
-                <option value="pt">🇵🇹 Português</option>
-                <option value="ru">🇷🇺 Русский</option>
-                <option value="ko">🇰🇷 한국어</option>
-                <option value="ar">🇸🇦 العربية</option>
-                <option value="hi">🇮🇳 हिन्दी</option>
-                <option value="nl">🇳🇱 Nederlands</option>
-            </select>
-            <select id="modelSelect" title="Model">
-                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                <option value="gemini-3.5-flash">gemini-3.5-flash</option>
-                <option value="gemini-3.6-flash">gemini-3.6-flash</option>
-                <option value="gemini-3.7-flash" selected>gemini-3.7-flash</option>
-            </select>
         </div>
     </div>
 
     <div class="chat-container" id="chatContainer">
-        <div class="message agent">Hello! Connected to Google Cloud Agent Platform. How can I assist you today?</div>
+        <div class="message agent">Connected to Google Cloud Agent Platform. How can I assist you today?</div>
     </div>
 
-    <div class="input-area">
-        <textarea id="promptInput" placeholder="Type a message... (Press Enter to send)"></textarea>
-        <button class="send-btn" id="sendBtn">Send</button>
+    <div class="input-wrapper">
+        <div class="autocomplete-dropdown" id="autoDropdown"></div>
+        <div class="input-area">
+            <textarea id="promptInput" placeholder="Type a message... (type / for skills)"></textarea>
+            <button class="send-btn" id="sendBtn">Send</button>
+        </div>
     </div>
 
     <script>
@@ -448,40 +470,42 @@ class AgentPlatformChatViewProvider {
         const promptInput = document.getElementById('promptInput');
         const sendBtn = document.getElementById('sendBtn');
         const modelSelect = document.getElementById('modelSelect');
-        const langSelect = document.getElementById('langSelect');
         const settingsBtn = document.getElementById('settingsBtn');
-        const statusBadge = document.getElementById('statusBadge');
-        const statusText = document.getElementById('statusText');
+        const projectBadge = document.getElementById('projectBadge');
+        const projectLabel = document.getElementById('projectLabel');
+        const autoDropdown = document.getElementById('autoDropdown');
+
+        function renderMessages(messages) {
+            chatContainer.innerHTML = '';
+            messages.forEach(msg => appendMessageDOM(msg));
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function appendMessageDOM(msg) {
+            let el = document.getElementById(msg.id);
+            if (!el) {
+                el = document.createElement('div');
+                el.id = msg.id;
+                el.className = 'message ' + msg.sender + (msg.status === 'error' ? ' error' : '');
+                chatContainer.appendChild(el);
+            }
+            el.textContent = msg.text;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
 
         function sendMessage() {
-            const prompt = promptInput.value.trim();
-            if (!prompt) return;
-
-            addMessage(prompt, 'user');
-            promptInput.value = '';
-            sendBtn.disabled = true;
-
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'loading';
-            loadingDiv.id = 'loadingIndicator';
-            loadingDiv.textContent = 'Agent thinking...';
-            chatContainer.appendChild(loadingDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            const text = promptInput.value.trim();
+            if (!text) return;
 
             vscode.postMessage({
                 type: 'sendMessage',
-                prompt: prompt,
+                prompt: text,
                 model: modelSelect.value,
-                language: langSelect.value
+                language: 'auto'
             });
-        }
 
-        function addMessage(text, sender) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'message ' + sender;
-            msgDiv.textContent = text;
-            chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            promptInput.value = '';
+            autoDropdown.style.display = 'none';
         }
 
         sendBtn.addEventListener('click', sendMessage);
@@ -490,8 +514,8 @@ class AgentPlatformChatViewProvider {
             vscode.postMessage({ type: 'openSettings' });
         });
 
-        statusBadge.addEventListener('click', () => {
-            statusText.textContent = 'Checking...';
+        projectBadge.addEventListener('click', () => {
+            projectLabel.textContent = 'Checking...';
             vscode.postMessage({ type: 'checkStatus' });
         });
 
@@ -502,37 +526,86 @@ class AgentPlatformChatViewProvider {
             }
         });
 
-        window.addEventListener('message', event => {
-            const message = event.data;
-            if (message.type === 'addResponse') {
-                const loading = document.getElementById('loadingIndicator');
-                if (loading) loading.remove();
-                sendBtn.disabled = false;
+        // Slash command autocomplete
+        promptInput.addEventListener('input', () => {
+            const val = promptInput.value;
+            if (val.startsWith('/')) {
+                vscode.postMessage({ type: 'getSkillSuggestions', query: val });
+            } else {
+                autoDropdown.style.display = 'none';
+            }
+        });
 
-                if (message.success) {
-                    addMessage(message.text, 'agent');
-                } else {
-                    addMessage('An error occurred: ' + (message.error || 'Unknown error'), 'error');
+        window.addEventListener('message', event => {
+            const msg = event.data;
+            switch (msg.type) {
+                case 'syncState': {
+                    if (msg.messages) renderMessages(msg.messages);
+                    if (msg.model) modelSelect.value = msg.model;
+                    if (msg.gcpStatus) updateGcpBadge(msg.gcpStatus);
+                    break;
                 }
-            } else if (message.type === 'gcpStatus') {
-                if (message.authenticated && message.projectId) {
-                    statusBadge.className = 'status-badge connected';
-                    statusText.textContent = message.projectId;
-                    statusBadge.title = 'Connected to GCP Project: ' + message.projectId + ' (' + (message.account || 'ADC') + '). Click to refresh.';
-                } else {
-                    statusBadge.className = 'status-badge disconnected';
-                    statusText.textContent = 'Unconfigured';
-                    statusBadge.title = (message.error || 'GCP Project ID not configured') + '. Click to refresh or click Settings to configure.';
+                case 'addMessage': {
+                    appendMessageDOM(msg.message);
+                    break;
+                }
+                case 'updateMessage': {
+                    appendMessageDOM(msg.message);
+                    break;
+                }
+                case 'gcpStatus': {
+                    updateGcpBadge(msg.gcpStatus);
+                    break;
+                }
+                case 'skillSuggestions': {
+                    renderSuggestions(msg.suggestions);
+                    break;
                 }
             }
         });
+
+        function updateGcpBadge(status) {
+            if (status.authenticated && status.projectId) {
+                projectBadge.className = 'project-badge connected';
+                projectLabel.textContent = 'PROJECT ID: ' + status.projectId;
+                projectBadge.title = 'Connected: ' + status.projectId + ' (' + (status.account || 'ADC') + ')';
+            } else {
+                projectBadge.className = 'project-badge disconnected';
+                projectLabel.textContent = 'PROJECT ID: None';
+                projectBadge.title = status.error || 'Click to configure Project ID';
+            }
+        }
+
+        function renderSuggestions(suggestions) {
+            if (!suggestions || suggestions.length === 0) {
+                autoDropdown.style.display = 'none';
+                return;
+            }
+            autoDropdown.innerHTML = '';
+            suggestions.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.innerHTML = '<span class="name">/' + s.name + '</span><span class="desc">' + s.description + '</span>';
+                item.addEventListener('click', () => {
+                    promptInput.value = '/' + s.name + ' ';
+                    autoDropdown.style.display = 'none';
+                    promptInput.focus();
+                });
+                autoDropdown.appendChild(item);
+            });
+            autoDropdown.style.display = 'flex';
+        }
     </script>
 </body>
 </html>`;
     }
 }
 
-function deactivate() {}
+function deactivate() {
+    if (rpcClient) {
+        rpcClient.dispose();
+    }
+}
 
 module.exports = {
     activate,

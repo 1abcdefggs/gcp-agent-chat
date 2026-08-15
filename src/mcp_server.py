@@ -27,7 +27,7 @@ def run_mcp_server():
         os.environ["GOOGLE_GENAI_USE_ENTERPRISE"] = "True"
 
         if not project_id:
-            return "ERROR: GOOGLE_CLOUD_PROJECT environment variable is not set. Please run gcp-auth-setup skill first."
+            return "ERROR: GOOGLE_CLOUD_PROJECT environment variable is not set. Please configure your GCP project ID."
 
         try:
             from google import genai
@@ -42,11 +42,11 @@ def run_mcp_server():
             lang_map = {
                 "auto": "Respond in the user's prompt language.",
                 "en": "Respond in English.",
-                "ja": "Respond in Japanese (日本語).",
-                "es": "Respond in Spanish (Español).",
-                "de": "Respond in German (Deutsch).",
-                "fr": "Respond in French (Français).",
-                "zh": "Respond in Chinese (中文)."
+                "ja": "Respond in Japanese.",
+                "es": "Respond in Spanish.",
+                "de": "Respond in German.",
+                "fr": "Respond in French.",
+                "zh": "Respond in Chinese."
             }
             instruction = lang_map.get(language, lang_map["auto"])
 
