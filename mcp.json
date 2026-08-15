@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "google-cloud-agent": {
+      "command": "python",
+      "args": ["src/mcp_server.py"],
+      "env": {
+        "GOOGLE_CLOUD_LOCATION": "global",
+        "GOOGLE_GENAI_USE_ENTERPRISE": "True"
+      }
+    }
+  }
+}

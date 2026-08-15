@@ -1,0 +1,14 @@
+.vscode/**
+.vscode-test/**
+out/**
+node_modules/**
+.gitignore
+**/*.map
+**/*.ts
+vscode-1.107.0/**
+vscode-1.107.0.tar.gz
+__pycache__/**
+**/*.pyc
+implementation_plan.md
+google-cloud-agent-platform.code-workspace
+quicksetup-agent-platform.ps1
