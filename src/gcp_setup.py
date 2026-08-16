@@ -1,5 +1,5 @@
 """
-Google Cloud Agent Platform -GCP Authentication & Setup Wizard
+GCP Agent Chat Platform -GCP Authentication & Setup Wizard
 This script includes gcloud CLI discovery, ADC browser authentication,
 A wizard tool that saves project settings to .env files.
 """

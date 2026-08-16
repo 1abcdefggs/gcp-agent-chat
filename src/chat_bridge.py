@@ -1,5 +1,5 @@
 """
-Google Cloud Agent Platform - JSON-RPC Daemon & Backend Bridge
+GCP Agent Chat Platform - JSON-RPC Daemon & Backend Bridge
 Handles IPC between the VS Code Extension (Node.js) and Google Cloud Vertex AI (Python SDK),
 providing autonomous tool execution and multi-modal chat support.
 """
@@ -51,7 +51,7 @@ def check_gcp_status(params=None):
             "project_id": None,
             "location": location,
             "account": account,
-            "error": "Google Cloud Project ID is not configured. Click Settings to set agentPlatform.projectId."
+            "error": "Google Cloud Project ID is not configured. Click Settings to set gcpAgentChat.projectId."
         }
 
     os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
@@ -139,7 +139,7 @@ def handle_chat_message(params):
         project_id = st.get("project_id")
 
     if not project_id:
-        raise ValueError("Google Cloud Project ID is not set. Please configure 'agentPlatform.projectId' in VS Code Settings.")
+        raise ValueError("Google Cloud Project ID is not set. Please configure 'gcpAgentChat.projectId' in VS Code Settings.")
 
     from google import genai
     from google.genai.types import HttpOptions, GenerateContentConfig
@@ -168,7 +168,7 @@ def handle_chat_message(params):
         base_lang = f"You MUST respond in {language_name}."
 
     sys_prompt = (
-        f"You are a helpful and autonomous AI Agent on Google Cloud Agent Platform. {base_lang} "
+        f"You are a helpful and autonomous AI Agent on GCP Agent Chat Platform. {base_lang} "
         "You have full access to workspace inspection tools: `read_file`, `list_files`, and `run_command`. "
         "When the user asks about the workspace, repository, files, status, or code, ALWAYS use these tools to inspect the real files before answering. "
         "CRITICAL RULE: If the user explicitly asks in natural language to switch language, "

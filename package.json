@@ -2,7 +2,7 @@
   "name": "gcp-agent-chat",
   "displayName": "GCP Agent Chat - Google Cloud Vertex AI & Gemini Assistant",
   "description": "Native IDE sidebar chat assistant powered by Google Cloud Vertex AI (Gemini 3.7-flash) with zero-CLI IDE login, autonomous tool execution, and session management.",
-  "version": "0.5.0",
+  "version": "0.8.3",
   "publisher": "1abcdefggs",
   "author": {
     "name": "1abcdefggs",
@@ -17,6 +17,7 @@
   "bugs": {
     "url": "https://github.com/1abcdefggs/gcp-agent-chat/issues"
   },
+  "icon": "asset/icon.png",
   "galleryBanner": {
     "color": "#0d0d12",
     "theme": "dark"
@@ -52,72 +53,72 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "agent-platform-sidebar",
-          "title": "Google Cloud Agent",
-          "icon": "asset/icon.svg"
+          "id": "gcp-agent-chat-sidebar",
+          "title": "GCP Agent Chat",
+          "icon": "asset/gcp-agents.svg"
         }
       ],
       "panel": [
         {
-          "id": "agent-platform-panel",
-          "title": "Google Cloud Agent",
-          "icon": "asset/icon.svg"
+          "id": "gcp-agent-chat-panel",
+          "title": "GCP Agent Chat",
+          "icon": "asset/gcp-agents.svg"
         }
       ]
     },
     "views": {
-      "agent-platform-sidebar": [
+      "gcp-agent-chat-sidebar": [
         {
-          "id": "agent-platform-chat-view",
+          "id": "gcp-agent-chat-chat-view",
           "name": "Gemini Agent Chat",
           "type": "webview",
-          "icon": "asset/icon.svg"
+          "icon": "asset/gcp-agents.svg"
         }
       ],
-      "agent-platform-panel": [
+      "gcp-agent-chat-panel": [
         {
-          "id": "agent-platform-chat-view-panel",
+          "id": "gcp-agent-chat-chat-view-panel",
           "name": "Gemini Agent Chat",
           "type": "webview",
-          "icon": "asset/icon.svg"
+          "icon": "asset/gcp-agents.svg"
         }
       ]
     },
     "commands": [
       {
-        "command": "agent-platform.openChat",
-        "title": "Google Cloud Agent: Open Chat"
+        "command": "gcp-agent-chat.openChat",
+        "title": "GCP Agent Chat: Open Chat"
       },
       {
-        "command": "agent-platform.askAboutCode",
-        "title": "Google Cloud Agent: Ask about this code"
+        "command": "gcp-agent-chat.askAboutCode",
+        "title": "GCP Agent Chat: Ask about this code"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "agent-platform.askAboutCode",
+          "command": "gcp-agent-chat.askAboutCode",
           "when": "editorHasSelection",
           "group": "navigation"
         }
       ]
     },
     "configuration": {
-      "title": "Google Cloud Agent Platform",
+      "title": "GCP Agent Chat Platform",
       "properties": {
-        "agentPlatform.projectId": {
+        "gcpAgentChat.projectId": {
           "order": 1,
           "type": "string",
           "default": "",
           "description": "Google Cloud Project ID (e.g. 'my-gcp-project-123'). If left empty, GOOGLE_CLOUD_PROJECT environment variable will be used."
         },
-        "agentPlatform.location": {
+        "gcpAgentChat.location": {
           "order": 2,
           "type": "string",
           "default": "global",
           "description": "Google Cloud Region / Location (e.g. 'global', 'us-central1')."
         },
-        "agentPlatform.authMode": {
+        "gcpAgentChat.authMode": {
           "order": 3,
           "type": "string",
           "default": "auto",
@@ -135,8 +136,14 @@
           ],
           "description": "Authentication method for Google Cloud Vertex AI."
         },
-        "agentPlatform.model": {
+        "gcpAgentChat.pythonPath": {
           "order": 4,
+          "type": "string",
+          "default": "",
+          "description": "Custom path or command for Python executable (e.g. 'py -3', 'python3', or full path to python.exe). If left empty, working Python will be auto-detected."
+        },
+        "gcpAgentChat.model": {
+          "order": 5,
           "type": "string",
           "default": "gemini-3.7-flash",
           "enum": [
@@ -153,8 +160,8 @@
           ],
           "description": "Default Gemini model for Agent conversations."
         },
-        "agentPlatform.language": {
-          "order": 5,
+        "gcpAgentChat.language": {
+          "order": 6,
           "type": "string",
           "default": "auto",
           "enum": [
@@ -176,29 +183,29 @@
           "enumDescriptions": [
             "Auto Detect (Follow input language)",
             "English (English)",
-            "Arabic (العربية)",
-            "Chinese (中文)",
+            "Arabic (Ø§Ù�E¹Ø±Ø¨ÙŠØ©)",
+            "Chinese (ä¸­æ–�E",
             "Dutch (Nederlands)",
-            "French (Français)",
+            "French (FranÃ§ais)",
             "German (Deutsch)",
-            "Hindi (हिन्दी)",
+            "Hindi (à¤¹à¤¿à¤¨à¥�à¤¦à¥€)",
             "Italian (Italiano)",
-            "Japanese (日本語)",
-            "Korean (한국어)",
-            "Portuguese (Português)",
-            "Russian (Русский)",
-            "Spanish (Español)"
+            "Japanese (æ—¥æœ¬èª�E",
+            "Korean (ú±œêµ­�E´)",
+            "Portuguese (PortuguÃªs)",
+            "Russian (Ð ÑƒÑ�E�EºÐ¸Ð¹)",
+            "Spanish (EspaÃ±ol)"
           ],
           "description": "Default target language for Agent responses."
         },
-        "agentPlatform.monthlyBudgetLimit": {
-          "order": 6,
+        "gcpAgentChat.monthlyBudgetLimit": {
+          "order": 7,
           "type": "number",
           "default": 10,
           "description": "Monthly budget limit ($) for Gemini API token usage. Requests will be safely blocked when exceeded."
         },
-        "agentPlatform.sessionStorageLocation": {
-          "order": 7,
+        "gcpAgentChat.sessionStorageLocation": {
+          "order": 8,
           "type": "string",
           "default": "global",
           "enum": [
@@ -210,6 +217,18 @@
             "Current workspace directory (.agents/sessions/)"
           ],
           "description": "Location where chat session logs are automatically stored."
+        },
+        "gcpAgentChat.enableRichAnimations": {
+          "order": 9,
+          "type": "boolean",
+          "default": true,
+          "description": "Enable rich Gemini visual effects and animated glowing borders."
+        },
+        "gcpAgentChat.maskProjectId": {
+          "order": 10,
+          "type": "boolean",
+          "default": true,
+          "description": "Hide / mask Google Cloud Project ID in chat UI status badges for privacy."
         }
       }
     }

@@ -24,6 +24,10 @@ yarn-error.log*
 
 # Agent private session logs & history
 .agents/sessions/
+.agents/artifacts/
+.agents/skill/
 *.jsonl
 
 docs
+Category Icons
+Unique Icons

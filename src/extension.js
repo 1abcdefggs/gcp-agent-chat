@@ -29,11 +29,14 @@ function activate(context) {
     // Resolve path to python bridge script
     const bridgeScript = path.join(__dirname, 'chat_bridge.py');
     const customEnv = getEnv();
+    const config = vscode.workspace.getConfiguration('gcpAgentChat');
+    const pythonPath = config.get('pythonPath');
 
     // Initialize persistent JSON-RPC client
     rpcClient = new RpcClient(bridgeScript, {
         cwd: workspaceRoot,
-        env: customEnv
+        env: customEnv,
+        pythonPath: pythonPath || null
     });
 
     const provider = new AgentPlatformChatViewProvider(
@@ -49,23 +52,23 @@ function activate(context) {
 
     // Register WebviewViewProvider for Activity Bar and Bottom/Secondary Panel
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider('agent-platform-chat-view', provider),
-        vscode.window.registerWebviewViewProvider('agent-platform-chat-view-panel', provider)
+        vscode.window.registerWebviewViewProvider('gcp-agent-chat-chat-view', provider),
+        vscode.window.registerWebviewViewProvider('gcp-agent-chat-chat-view-panel', provider)
     );
 
     // Register Commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('agent-platform.openChat', () => {
-            vscode.commands.executeCommand('workbench.view.extension.agent-platform-sidebar');
+        vscode.commands.registerCommand('gcp-agent-chat.openChat', () => {
+            vscode.commands.executeCommand('workbench.view.extension.gcp-agent-chat-sidebar');
         }),
-        vscode.commands.registerCommand('agent-platform.openSettings', async () => {
+        vscode.commands.registerCommand('gcp-agent-chat.openSettings', async () => {
             try {
-                await vscode.commands.executeCommand('workbench.action.openSettings', 'agentPlatform');
+                await vscode.commands.executeCommand('workbench.action.openSettings', 'gcpAgentChat');
             } catch (e) {
                 await vscode.commands.executeCommand('workbench.action.openSettings');
             }
         }),
-        vscode.commands.registerCommand('agent-platform.askAboutCode', async () => {
+        vscode.commands.registerCommand('gcp-agent-chat.askAboutCode', async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
                 vscode.window.showWarningMessage('There are no editors open. Please open a file and try again.');
@@ -79,7 +82,7 @@ function activate(context) {
             const filename = path.basename(editor.document.fileName);
             const prompt = `Please explain/review the following code (${filename}):\n\`\`\`${editor.document.languageId}\n${selectedText}\n\`\`\``;
 
-            await vscode.commands.executeCommand('workbench.view.extension.agent-platform-sidebar');
+            await vscode.commands.executeCommand('workbench.view.extension.gcp-agent-chat-sidebar');
             stateManager.broadcast({ type: 'fillPrompt', prompt });
         })
     );
@@ -90,15 +93,32 @@ function activate(context) {
     // Refresh environment when settings change
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('agentPlatform')) {
-                const config = vscode.workspace.getConfiguration('agentPlatform');
-                if (e.affectsConfiguration('agentPlatform.model')) {
-                    const m = config.get('model');
-                    if (m) stateManager.selectedModel = m;
+            if (e.affectsConfiguration('gcpAgentChat')) {
+                const cfg = vscode.workspace.getConfiguration('gcpAgentChat');
+                if (e.affectsConfiguration('gcpAgentChat.model')) {
+                    const m = cfg.get('model');
+                    if (m) {
+                        stateManager.selectedModel = m;
+                        stateManager.broadcast({ type: 'selectModel', model: m });
+                    }
                 }
-                if (e.affectsConfiguration('agentPlatform.language')) {
-                    const l = config.get('language');
+                if (e.affectsConfiguration('gcpAgentChat.language')) {
+                    const l = cfg.get('language');
                     if (l) stateManager.targetLanguage = l;
+                }
+                if (e.affectsConfiguration('gcpAgentChat.pythonPath')) {
+                    const p = cfg.get('pythonPath');
+                    if (rpcClient) {
+                        rpcClient.updatePythonPath(p);
+                    }
+                }
+                if (e.affectsConfiguration('gcpAgentChat.enableRichAnimations')) {
+                    const rich = cfg.get('enableRichAnimations', true);
+                    stateManager.broadcast({ type: 'setRichAnimations', enabled: rich });
+                }
+                if (e.affectsConfiguration('gcpAgentChat.maskProjectId')) {
+                    const masked = cfg.get('maskProjectId', true);
+                    stateManager.broadcast({ type: 'setMaskProjectId', masked });
                 }
                 checkGcpStatus();
                 costTracker.broadcastCurrentCost();
@@ -108,7 +128,7 @@ function activate(context) {
 }
 
 function getEnv() {
-    const config = vscode.workspace.getConfiguration('agentPlatform');
+    const config = vscode.workspace.getConfiguration('gcpAgentChat');
     const customEnv = Object.assign({}, process.env);
     const configuredProjectId = config.get('projectId');
     const configuredLocation = config.get('location');
@@ -124,7 +144,8 @@ function getEnv() {
 
 async function checkGcpStatus() {
     if (!rpcClient) return;
-    const config = vscode.workspace.getConfiguration('agentPlatform');
+    stateManager.updateGcpStatus({ loading: true, error: null });
+    const config = vscode.workspace.getConfiguration('gcpAgentChat');
     const projectId = config.get('projectId') || process.env.GOOGLE_CLOUD_PROJECT || '';
     const location = config.get('location') || process.env.GOOGLE_CLOUD_LOCATION || 'global';
     const auth = await AuthManager.resolveCredentials();
@@ -143,13 +164,15 @@ async function checkGcpStatus() {
             location: result.location || location,
             account: result.account || auth.account,
             authMode: result.auth_mode || auth.mode,
-            error: result.error
+            error: result.error,
+            loading: false
         });
     } catch (err) {
         stateManager.updateGcpStatus({
             authenticated: false,
             projectId: projectId || null,
-            error: err.message || 'Failed to check GCP status'
+            error: err.message || 'Failed to check GCP status',
+            loading: false
         });
     }
 }

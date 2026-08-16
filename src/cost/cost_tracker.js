@@ -5,12 +5,12 @@ class CostTracker {
     constructor(stateManager, globalState = null) {
         this.state = stateManager;
         this.globalState = globalState;
-        this.totalCost = this.globalState ? (this.globalState.get('agentPlatform.totalCost') || 0.0) : 0.0;
+        this.totalCost = this.globalState ? (this.globalState.get('gcpAgentChat.totalCost') || 0.0) : 0.0;
         this.sessionCost = 0.0;
     }
 
     getMonthlyBudget() {
-        const config = vscode.workspace.getConfiguration('agentPlatform');
+        const config = vscode.workspace.getConfiguration('gcpAgentChat');
         return config.get('monthlyBudgetLimit') || DEFAULT_CONFIG.monthlyBudgetLimit;
     }
 
@@ -27,7 +27,7 @@ class CostTracker {
         this.totalCost += total;
 
         if (this.globalState) {
-            this.globalState.update('agentPlatform.totalCost', this.totalCost);
+            this.globalState.update('gcpAgentChat.totalCost', this.totalCost);
         }
 
         this.broadcastCurrentCost(total);
@@ -63,7 +63,7 @@ class CostTracker {
     resetTotalCost() {
         this.totalCost = 0.0;
         if (this.globalState) {
-            this.globalState.update('agentPlatform.totalCost', 0.0);
+            this.globalState.update('gcpAgentChat.totalCost', 0.0);
         }
         this.broadcastCurrentCost();
     }

@@ -1,8 +1,8 @@
-# Windows Setup Script for Google Cloud Agent Platform Dotfiles Ecosystem
+# Windows Setup Script for GCP Agent Chat Platform Dotfiles Ecosystem
 $ErrorActionPreference = "Stop"
 
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host " Google Cloud Agent Platform Setup Wizard" -ForegroundColor Cyan
+Write-Host " GCP Agent Chat Platform Setup Wizard" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 
 # 1. Check Python installation
@@ -40,5 +40,5 @@ python src/gcp_setup.py
 
 Write-Host "`n==================================================" -ForegroundColor Cyan
 Write-Host " Setup complete! You can now launch VS Code and use" -ForegroundColor Cyan
-Write-Host " the Google Cloud Agent Platform sidebar extension & MCP." -ForegroundColor Cyan
+Write-Host " the GCP Agent Chat Platform sidebar extension & MCP." -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan

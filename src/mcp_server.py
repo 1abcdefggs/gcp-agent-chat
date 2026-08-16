@@ -3,7 +3,7 @@ import sys
 import json
 
 def run_mcp_server():
-    """Run FastMCP / JSON-RPC Stdio Server for Google Cloud Agent Platform."""
+    """Run FastMCP / JSON-RPC Stdio Server for GCP Agent Chat Platform."""
     try:
         from fastmcp import FastMCP
     except ImportError:
@@ -11,11 +11,11 @@ def run_mcp_server():
         print("FastMCP library not installed. Install via: pip install fastmcp", file=sys.stderr)
         sys.exit(1)
 
-    mcp = FastMCP("google-cloud-agent-platform")
+    mcp = FastMCP("google-cloud-gcp-agent-chat")
 
     @mcp.tool()
     def ask_gemini(prompt: str, model: str = "gemini-3.7-flash", language: str = "auto") -> str:
-        """Query Google Cloud Agent Platform (Gemini Enterprise Model) via official SDK.
+        """Query GCP Agent Chat Platform (Gemini Enterprise Model) via official SDK.
         
         Args:
             prompt: User query or prompt.
@@ -48,7 +48,7 @@ def run_mcp_server():
                 model=model,
                 contents=prompt,
                 config=GenerateContentConfig(
-                    system_instruction=f"You are Google Cloud Agent Platform Assistant. {instruction}"
+                    system_instruction=f"You are GCP Agent Chat Platform Assistant. {instruction}"
                 )
             )
             return response.text
@@ -57,7 +57,7 @@ def run_mcp_server():
 
     @mcp.tool()
     def get_gcp_status() -> str:
-        """Get current Google Cloud Agent Platform connection status."""
+        """Get current GCP Agent Chat Platform connection status."""
         project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "Unconfigured")
         location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
         return f"Connected to Project: {project_id} (Location: {location})"

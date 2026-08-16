@@ -1,8 +1,8 @@
 (function () {
     const ICONS = {
-        copy: '<svg viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>',
-        insert: '<svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/></svg>',
-        newFile: '<svg viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 1 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>'
+        copy: '<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>',
+        insert: '<svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>',
+        newFile: '<svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14h-3v3h-2v-3H8v-2h3v-3h2v3h3v2zm-3-7V3.5L18.5 9H13z"/></svg>'
     };
 
     function formatMarkdown(text) {
@@ -44,16 +44,84 @@
         el.appendChild(div);
     }
 
+    function createThinkingIndicator() {
+        const wrap = document.createElement('div');
+        wrap.className = 'bouncing-thinking-indicator';
+        wrap.innerHTML = `
+            <div class="thinking-avatar-wrap">
+                <img class="thinking-avatar-img" src="${window.LOGO_URI || ''}" alt="AI" />
+            </div>
+            <div class="bouncing-dots-container">
+                <div class="bounce-dot dot-1"></div>
+                <div class="bounce-dot dot-2"></div>
+                <div class="bounce-dot dot-3"></div>
+                <div class="bounce-dot dot-4"></div>
+            </div>
+            <span class="thinking-label">Thinking...</span>
+        `;
+        return wrap;
+    }
+
     function createMessageNode(text, sender, status, id, vscode) {
-        const el = document.createElement('div');
-        if (id) el.id = id;
-        el.className = `message ${sender}${status ? ' ' + status : ''}`;
+        const row = document.createElement('div');
+        if (id) row.id = id;
+        row.className = `message-row ${sender}${status ? ' ' + status : ''}`;
+
         if (sender === 'user') {
-            el.textContent = text;
-            return el;
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble user';
+            bubble.textContent = text;
+            row.appendChild(bubble);
+            return row;
         }
 
-        if (text?.includes('```')) {
+        if (sender === 'system' || sender === 'error') {
+            const msg = document.createElement('div');
+            msg.className = `message ${sender}`;
+            msg.textContent = text;
+            row.appendChild(msg);
+            return row;
+        }
+
+        // Agent / AI Message with Animated Glowing Border Wrapper & Robot Avatar
+        const aiWrapper = document.createElement('div');
+        const isGenerating = status === 'thinking' || status === 'generating';
+        aiWrapper.className = `ai-wrapper ${isGenerating ? 'generating' : 'finished'}`;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble ai';
+
+        // Add Agent Header with Robot Avatar Icon
+        const agentHeader = document.createElement('div');
+        agentHeader.className = 'agent-msg-header';
+
+        const avatarWrap = document.createElement('div');
+        avatarWrap.className = 'agent-avatar-wrap';
+
+        const avatarImg = document.createElement('img');
+        avatarImg.className = 'agent-avatar-img';
+        avatarImg.src = window.LOGO_URI || '';
+        avatarImg.alt = 'Gemini Agent';
+        avatarWrap.appendChild(avatarImg);
+
+        const agentName = document.createElement('span');
+        agentName.className = 'agent-name';
+        agentName.textContent = 'Gemini Agent';
+
+        agentHeader.append(avatarWrap, agentName);
+
+        if (isGenerating) {
+            const statusTag = document.createElement('span');
+            statusTag.className = 'agent-status-tag';
+            statusTag.textContent = 'Generating...';
+            agentHeader.appendChild(statusTag);
+        }
+
+        bubble.appendChild(agentHeader);
+
+        if (status === 'thinking' && (!text || text.trim() === 'Thinking...')) {
+            bubble.appendChild(createThinkingIndicator());
+        } else if (text?.includes('```')) {
             text.split(/(```[\s\S]*?```)/g).forEach(part => {
                 if (part.startsWith('```') && part.endsWith('```')) {
                     const firstNL = part.indexOf('\n');
@@ -70,15 +138,18 @@
                     const codeEl = document.createElement('code');
                     codeEl.textContent = code;
                     pre.append(hdr, codeEl);
-                    el.appendChild(pre);
+                    bubble.appendChild(pre);
                 } else {
-                    appendMd(el, part);
+                    appendMd(bubble, part);
                 }
             });
         } else {
-            appendMd(el, text);
+            appendMd(bubble, text);
         }
-        return el;
+
+        aiWrapper.appendChild(bubble);
+        row.appendChild(aiWrapper);
+        return row;
     }
 
     window.MarkdownRenderer = {

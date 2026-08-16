@@ -1,5 +1,5 @@
 /**
- * Google Cloud Agent Platform - Core Configuration & Single Source of Truth (SSOT)
+ * GCP Agent Chat Platform - Core Configuration & Single Source of Truth (SSOT)
  * Centralizes all supported models, languages, and pricing metrics.
  */
 

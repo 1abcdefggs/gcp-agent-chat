@@ -7,7 +7,7 @@ class AuthManager {
      * @returns {Promise<{ mode: string, token?: string, account?: string, error?: string }>}
      */
     static async resolveCredentials() {
-        const config = vscode.workspace.getConfiguration('agentPlatform');
+        const config = vscode.workspace.getConfiguration('gcpAgentChat');
         const authMode = config.get('authMode') || 'auto';
 
         // 1. Try IDE Google Authentication if mode is 'auto' or 'ide'
@@ -52,7 +52,7 @@ class AuthManager {
      * Display the interactive Authentication Manager menu (QuickPick).
      */
     static async showAuthQuickPick(currentStatus, onRefresh) {
-        const config = vscode.workspace.getConfiguration('agentPlatform');
+        const config = vscode.workspace.getConfiguration('gcpAgentChat');
         const currentMode = config.get('authMode') || 'auto';
         const currentProject = currentStatus?.projectId || config.get('projectId') || '(Not configured)';
         const isAuth = currentStatus?.authenticated;
@@ -78,7 +78,7 @@ class AuthManager {
         // 2. gcloud CLI Login Option
         items.push({
             label: '$(terminal) Sign in with gcloud CLI (application-default login)',
-            description: 'Authenticate dedicated/external GCP account via browser',
+            description: 'Authenticate dedicated/external GCP account via browser (Google Auth Library)',
             action: 'loginGcloud'
         });
 
@@ -98,10 +98,25 @@ class AuthManager {
             });
         }
 
-        // 5. Open Settings Option
+        // 5. Toggle Masking Option
+        const isMasked = config.get('maskProjectId', true);
         items.push({
-            label: '$(gear) Configure Project ID & Settings...',
-            description: 'Open agentPlatform VS Code settings',
+            label: isMasked ? '$(eye) Reveal Project ID in UI' : '$(eye-closed) Mask / Hide Project ID in UI',
+            description: isMasked ? 'Currently masked (••••••) for privacy' : 'Currently visible in UI status badges',
+            action: 'toggleMask'
+        });
+
+        // 6. Set / Edit Project ID Option
+        items.push({
+            label: '$(edit) Set / Edit Google Cloud Project ID...',
+            description: `Configured: ${config.get('projectId') || '(Auto-detected: ' + currentProject + ')'}`,
+            action: 'setProjectId'
+        });
+
+        // 7. Open Settings Option
+        items.push({
+            label: '$(gear) Configure All Settings...',
+            description: 'Open gcpAgentChat VS Code settings',
             action: 'settings'
         });
 
@@ -139,7 +154,10 @@ class AuthManager {
                 const terminal = vscode.window.createTerminal('Google Cloud Auth');
                 terminal.show();
                 terminal.sendText('gcloud auth application-default login');
-                vscode.window.showInformationMessage('Running "gcloud auth application-default login" in the terminal. Complete the browser authentication, then refresh.');
+                vscode.window.showInformationMessage(
+                    'Running "gcloud auth application-default login". Complete the browser authorization. (Note: Google will send an official security email stating "Google Auth Library access granted" - this is expected and normal).',
+                    'Got it'
+                );
                 break;
             }
 
@@ -180,9 +198,32 @@ class AuthManager {
                 break;
             }
 
+            case 'toggleMask': {
+                const currentMask = config.get('maskProjectId', true);
+                await config.update('maskProjectId', !currentMask, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Project ID is now ${!currentMask ? 'masked (hidden)' : 'visible'} in UI.`);
+                if (onRefresh) onRefresh();
+                break;
+            }
+
+            case 'setProjectId': {
+                const defaultVal = config.get('projectId') || (currentStatus?.projectId && currentStatus.projectId !== '(Not configured)' ? currentStatus.projectId : '');
+                const input = await vscode.window.showInputBox({
+                    prompt: 'Enter Google Cloud Project ID (e.g., my-gcp-project)',
+                    value: defaultVal,
+                    placeHolder: 'my-gcp-project'
+                });
+                if (input !== undefined) {
+                    await config.update('projectId', input.trim(), vscode.ConfigurationTarget.Global);
+                    vscode.window.showInformationMessage(`Google Cloud Project ID updated to: ${input.trim() || '(Auto-detected)'}`);
+                    if (onRefresh) onRefresh();
+                }
+                break;
+            }
+
             case 'settings': {
                 try {
-                    await vscode.commands.executeCommand('workbench.action.openSettings', 'agentPlatform');
+                    await vscode.commands.executeCommand('workbench.action.openSettings', 'gcpAgentChat');
                 } catch (e) {
                     await vscode.commands.executeCommand('workbench.action.openSettings');
                 }
