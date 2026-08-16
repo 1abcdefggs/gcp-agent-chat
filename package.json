@@ -53,14 +53,14 @@
       "activitybar": [
         {
           "id": "agent-platform-sidebar",
-          "title": "Google Cloud Agent",
+          "title": "GCP Agent Chat",
           "icon": "asset/icon.svg"
         }
       ],
       "panel": [
         {
           "id": "agent-platform-panel",
-          "title": "Google Cloud Agent",
+          "title": "GCP Agent Chat",
           "icon": "asset/icon.svg"
         }
       ]
@@ -86,11 +86,11 @@
     "commands": [
       {
         "command": "agent-platform.openChat",
-        "title": "Google Cloud Agent: Open Chat"
+        "title": "GCP Agent Chat: Open Chat"
       },
       {
         "command": "agent-platform.askAboutCode",
-        "title": "Google Cloud Agent: Ask about this code"
+        "title": "GCP Agent Chat: Ask about this code"
       }
     ],
     "menus": {
@@ -103,7 +103,7 @@
       ]
     },
     "configuration": {
-      "title": "Google Cloud Agent Platform",
+      "title": "GCP Agent Chat Platform",
       "properties": {
         "agentPlatform.projectId": {
           "order": 1,
