@@ -41,7 +41,14 @@
 
     const populateSelect = (el, items, val) => {
         if (!items?.length) return;
-        el.innerHTML = items.map(item => `<option value="${item.id}" ${item.id === val ? 'selected' : ''}>${item.name || item.id}</option>`).join('');
+        el.replaceChildren();
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = String(item.id ?? '');
+            option.textContent = String(item.name || item.id || '');
+            option.selected = item.id === val;
+            el.appendChild(option);
+        });
         if (val) el.value = val;
     };
 
