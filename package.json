@@ -2,7 +2,7 @@
   "name": "gcp-agent-chat",
   "displayName": "GCP Agent Chat - Google Cloud Vertex AI & Gemini Assistant",
   "description": "Native IDE sidebar chat assistant powered by Google Cloud Vertex AI (Gemini 3.7-flash) with zero-CLI IDE login, autonomous tool execution, and session management.",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "publisher": "1abcdefggs",
   "author": {
     "name": "1abcdefggs",
