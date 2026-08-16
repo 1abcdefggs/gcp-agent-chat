@@ -67,7 +67,12 @@
             setOrbState('idle');
         }
 
-        // Welcome card status box
+        // Welcome card wrapper & status box
+        const welcomeWrapper = $('welcomeCardWrapper');
+        if (welcomeWrapper) {
+            welcomeWrapper.className = `welcome-card-wrapper ${isLoading ? 'connecting' : (isOk ? 'connected' : 'disconnected')}`;
+        }
+
         const statusBox = $('welcomeStatusBox');
         if (statusBox) {
             if (isLoading) {
@@ -113,17 +118,24 @@
         if (messages?.length) {
             messages.forEach(m => appendMessage(m.text, m.sender, m.status, m.id));
         } else {
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.className = 'welcome-card';
-            welcomeDiv.innerHTML = `
-                <div class="welcome-icon-wrap">
-                    <img class="welcome-logo-img" src="${window.LOGO_URI || ''}" alt="GCP Agent Chat Logo" />
+            const isLoading = currentGcpStatus?.loading;
+            const isOk = currentGcpStatus?.authenticated && currentGcpStatus?.projectId;
+            const stateClass = isLoading ? 'connecting' : (isOk ? 'connected' : 'disconnected');
+
+            const welcomeWrapper = document.createElement('div');
+            welcomeWrapper.id = 'welcomeCardWrapper';
+            welcomeWrapper.className = `welcome-card-wrapper ${stateClass}`;
+            welcomeWrapper.innerHTML = `
+                <div class="welcome-card">
+                    <div class="welcome-icon-wrap">
+                        <img class="welcome-logo-img" src="${window.LOGO_URI || ''}" alt="GCP Agent Chat Logo" />
+                    </div>
+                    <div class="welcome-title">GCP Agent Chat</div>
+                    <div class="welcome-desc">Google Cloud Vertex AI & Gemini powered coding assistant. Ask questions, inspect workspace files, or generate code.</div>
+                    <div class="welcome-status-box" id="welcomeStatusBox"></div>
                 </div>
-                <div class="welcome-title">GCP Agent Chat</div>
-                <div class="welcome-desc">Google Cloud Vertex AI & Gemini powered coding assistant. Ask questions, inspect workspace files, or generate code.</div>
-                <div class="welcome-status-box" id="welcomeStatusBox"></div>
             `;
-            chatContainer.appendChild(welcomeDiv);
+            chatContainer.appendChild(welcomeWrapper);
             if (currentGcpStatus) {
                 updateGcpStatusUI(currentGcpStatus);
             }
