@@ -63,7 +63,7 @@ class AgentPlatformChatViewProvider {
                 }
                 case 'openSettings': {
                     try {
-                        await vscode.commands.executeCommand('workbench.action.openSettings', 'agentPlatform');
+                        await vscode.commands.executeCommand('workbench.action.openSettings', 'gcpAgentChat');
                     } catch (e) {
                         await vscode.commands.executeCommand('workbench.action.openSettings');
                     }
@@ -132,7 +132,7 @@ class AgentPlatformChatViewProvider {
 
         // Check budget limit
         if (this._cost && !this._cost.canSendRequest()) {
-            this._state.addMessage('system', '[Warning] Your monthly budget limit has been reached, so the request has been blocked for safety. You can change the limit in the VS Code settings (agentPlatform.monthlyBudgetLimit).');
+            this._state.addMessage('system', '[Warning] Your monthly budget limit has been reached, so the request has been blocked for safety. You can change the limit in the VS Code settings (gcpAgentChat.monthlyBudgetLimit).');
             return;
         }
 
@@ -178,7 +178,7 @@ class AgentPlatformChatViewProvider {
         const agentMsg = this._state.addMessage('agent', '...', { status: 'loading' });
 
         try {
-            const config = vscode.workspace.getConfiguration('agentPlatform');
+            const config = vscode.workspace.getConfiguration('gcpAgentChat');
             const projectId = config.get('projectId') || process.env.GOOGLE_CLOUD_PROJECT || '';
             const location = config.get('location') || process.env.GOOGLE_CLOUD_LOCATION || 'global';
 
@@ -232,9 +232,11 @@ class AgentPlatformChatViewProvider {
 
     _getHtmlForWebview(webview) {
         const mediaPath = path.join(this._extensionUri.fsPath, 'src', 'media');
+        const assetPath = path.join(this._extensionUri.fsPath, 'asset');
         const styleUri = webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'chat.css')));
         const markdownScriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'markdown_renderer.js')));
         const scriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(mediaPath, 'chat.js')));
+        const logoUri = webview.asWebviewUri(vscode.Uri.file(path.join(assetPath, 'icon.png')));
         const htmlTemplatePath = path.join(mediaPath, 'chat.html');
 
         let html = fs.readFileSync(htmlTemplatePath, 'utf-8');
@@ -242,7 +244,8 @@ class AgentPlatformChatViewProvider {
             .replace(/\{\{cspSource\}\}/g, webview.cspSource)
             .replace(/\{\{styleUri\}\}/g, styleUri.toString())
             .replace(/\{\{markdownScriptUri\}\}/g, markdownScriptUri.toString())
-            .replace(/\{\{scriptUri\}\}/g, scriptUri.toString());
+            .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
+            .replace(/\{\{logoUri\}\}/g, logoUri.toString());
 
         return html;
     }

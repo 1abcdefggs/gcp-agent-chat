@@ -9,6 +9,7 @@
     const fileInput = $('fileInput'), attachBtn = $('attachBtn'), previewBar = $('imagePreviewBar');
 
     let attachedImages = [];
+    let currentGcpStatus = null;
 
     const adjustHeight = () => {
         promptInput.style.height = 'auto';
@@ -19,10 +20,55 @@
     };
 
     const updateGcpStatusUI = st => {
+        currentGcpStatus = st;
+        const isLoading = st?.loading;
         const isOk = st?.authenticated && st?.projectId;
-        statusBadge.className = `badge clickable ${isOk ? 'connected' : 'disconnected'}`;
-        statusText.textContent = isOk ? 'GCP : Connected' : 'GCP : Disconnected';
-        statusBadge.title = isOk ? 'GCP : Connected (Click for account/project details)' : `${st?.error || 'Project ID not configured'} (Click to connect)`;
+
+        // Header status badge
+        if (isLoading) {
+            statusBadge.className = 'badge clickable loading';
+            statusText.textContent = 'GCP : Connecting...';
+            statusBadge.title = 'Verifying Google Cloud connection...';
+        } else {
+            statusBadge.className = `badge clickable ${isOk ? 'connected' : 'disconnected'}`;
+            statusText.textContent = isOk ? 'GCP : Connected' : 'GCP : Disconnected';
+            statusBadge.title = isOk ? `GCP : Connected (${st.projectId})\nClick for account details` : `${st?.error || 'Project ID not configured'} (Click to connect)`;
+        }
+
+        // Welcome card status box
+        const statusBox = $('welcomeStatusBox');
+        if (statusBox) {
+            if (isLoading) {
+                statusBox.innerHTML = `
+                    <div class="welcome-status-pill loading">
+                        <span class="spinner-dot"></span>
+                        <span>Connecting to Google Cloud...</span>
+                    </div>
+                `;
+            } else if (isOk) {
+                statusBox.innerHTML = `
+                    <div class="welcome-status-pill connected clickable" id="welcomeStatusPill" title="Connected: ${st.projectId}">
+                        <span class="status-dot"></span>
+                        <span>GCP : Connected (${st.projectId})</span>
+                    </div>
+                `;
+                const pill = $('welcomeStatusPill');
+                if (pill) pill.onclick = () => vscode.postMessage({ type: 'checkStatus' });
+            } else {
+                statusBox.innerHTML = `
+                    <div class="welcome-status-pill disconnected">
+                        <span class="status-dot"></span>
+                        <span>GCP : Disconnected</span>
+                    </div>
+                    <button class="welcome-login-btn" id="welcomeLoginBtn" title="Sign in with IDE Google Login or gcloud">
+                        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+                        <span>Connect & Sign In to GCP</span>
+                    </button>
+                `;
+                const btn = $('welcomeLoginBtn');
+                if (btn) btn.onclick = () => vscode.postMessage({ type: 'checkStatus' });
+            }
+        }
     };
 
     const appendMessage = (text, sender, status, id) => {
@@ -35,7 +81,20 @@
         if (messages?.length) {
             messages.forEach(m => appendMessage(m.text, m.sender, m.status, m.id));
         } else {
-            appendMessage('Connected to GCP Agent Chat Platform. Feel free to inspect workspace files, generate code, or ask questions.', 'agent', 'complete');
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'welcome-card';
+            welcomeDiv.innerHTML = `
+                <div class="welcome-icon-wrap">
+                    <img class="welcome-logo-img" src="${window.LOGO_URI || ''}" alt="GCP Agent Chat Logo" />
+                </div>
+                <div class="welcome-title">GCP Agent Chat</div>
+                <div class="welcome-desc">Google Cloud Vertex AI & Gemini powered coding assistant. Ask questions, inspect workspace files, or generate code.</div>
+                <div class="welcome-status-box" id="welcomeStatusBox"></div>
+            `;
+            chatContainer.appendChild(welcomeDiv);
+            if (currentGcpStatus) {
+                updateGcpStatusUI(currentGcpStatus);
+            }
         }
     };
 

@@ -6,7 +6,7 @@ class ChatStateManager extends EventEmitter {
     constructor() {
         super();
         this.messages = [];
-        const config = typeof vscode !== 'undefined' && vscode.workspace ? vscode.workspace.getConfiguration('agentPlatform') : null;
+        const config = typeof vscode !== 'undefined' && vscode.workspace ? vscode.workspace.getConfiguration('gcpAgentChat') : null;
         this.selectedModel = (config && config.get('model')) || DEFAULT_CONFIG.model;
         this.targetLanguage = (config && config.get('language')) || DEFAULT_CONFIG.language;
         this.availableModels = SUPPORTED_MODELS;
@@ -16,7 +16,8 @@ class ChatStateManager extends EventEmitter {
             projectId: null,
             location: 'global',
             account: null,
-            error: null
+            error: null,
+            loading: false
         };
         this._activeWebviews = new Set();
     }

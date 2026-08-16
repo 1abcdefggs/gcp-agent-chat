@@ -1,4 +1,4 @@
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const readline = require('readline');
 const EventEmitter = require('events');
 
@@ -8,12 +8,53 @@ class RpcClient extends EventEmitter {
         this.scriptPath = pythonScriptPath;
         this.cwd = options.cwd || process.cwd();
         this.customEnv = options.env || process.env;
+        this.customPythonPath = options.pythonPath || null;
         this.process = null;
         this._rl = null;
         this.requestId = 0;
         this.pendingRequests = new Map();
         this.isDisposed = false;
+        this.lastStderr = '';
         this._initProcess();
+    }
+
+    _resolvePythonCommand() {
+        if (this.customPythonPath && this.customPythonPath.trim()) {
+            const parts = this.customPythonPath.trim().split(/\s+/);
+            return { cmd: parts[0], argsPrefix: parts.slice(1) };
+        }
+
+        const candidates = process.platform === 'win32'
+            ? [
+                { cmd: 'py', argsPrefix: ['-3'] },
+                { cmd: 'python', argsPrefix: [] },
+                { cmd: 'python3', argsPrefix: [] },
+                { cmd: 'py', argsPrefix: [] }
+            ]
+            : [
+                { cmd: 'python3', argsPrefix: [] },
+                { cmd: 'python', argsPrefix: [] }
+            ];
+
+        for (const cand of candidates) {
+            try {
+                const res = spawnSync(cand.cmd, [...cand.argsPrefix, '-c', 'import sys; sys.exit(0)'], {
+                    cwd: this.cwd,
+                    env: this.customEnv,
+                    timeout: 3000,
+                    windowsHide: true
+                });
+                if (res.status === 0) {
+                    return cand;
+                }
+            } catch (e) {
+                // Try next candidate
+            }
+        }
+
+        return process.platform === 'win32'
+            ? { cmd: 'py', argsPrefix: ['-3'] }
+            : { cmd: 'python3', argsPrefix: [] };
     }
 
     _initProcess() {
@@ -24,20 +65,28 @@ class RpcClient extends EventEmitter {
             PYTHONUNBUFFERED: '1'
         });
 
-        this.process = spawn('python', [this.scriptPath, '--daemon'], {
+        const { cmd, argsPrefix } = this._resolvePythonCommand();
+        const spawnArgs = [...argsPrefix, this.scriptPath, '--daemon'];
+
+        this.lastStderr = '';
+        this.process = spawn(cmd, spawnArgs, {
             cwd: this.cwd,
-            env
+            env,
+            windowsHide: true
         });
 
         this._rl = readline.createInterface({ input: this.process.stdout });
         this._rl.on('line', (line) => this._handleLine(line));
 
         this.process.stderr.on('data', (data) => {
-            console.error('[Python Bridge stderr]:', data.toString());
+            const str = data.toString();
+            console.error('[Python Bridge stderr]:', str);
+            this.lastStderr = (this.lastStderr + '\n' + str).slice(-2000).trim();
         });
 
         this.process.on('close', (code) => {
-            this._rejectAllPending(`Python bridge process closed unexpectedly with code ${code}`);
+            const errDetail = this.lastStderr ? ` (Stderr: ${this.lastStderr})` : '';
+            this._rejectAllPending(`Python bridge process closed unexpectedly with code ${code}${errDetail}`);
             if (this._rl) {
                 this._rl.close();
                 this._rl = null;
@@ -87,8 +136,9 @@ class RpcClient extends EventEmitter {
     /** Call a JSON-RPC 2.0 method with optional timeout */
     call(method, params = {}, timeoutMs = 60000) {
         return new Promise((resolve, reject) => {
-            if (!this.process || !this.process.stdin.writable) {
-                reject(new Error('Python bridge process is not running or stdin is closed'));
+            if (!this.process || !this.process.stdin || !this.process.stdin.writable) {
+                const errDetail = this.lastStderr ? ` (Stderr: ${this.lastStderr})` : '';
+                reject(new Error(`Python bridge process is not running or stdin is closed${errDetail}`));
                 return;
             }
 
@@ -108,6 +158,15 @@ class RpcClient extends EventEmitter {
             this.pendingRequests.set(id, { resolve, reject, timer });
             this.process.stdin.write(payload);
         });
+    }
+
+    updatePythonPath(newPath) {
+        this.customPythonPath = newPath || null;
+        if (this.process) {
+            this.process.kill();
+            this.process = null;
+        }
+        this._initProcess();
     }
 
     dispose() {

@@ -29,11 +29,14 @@ function activate(context) {
     // Resolve path to python bridge script
     const bridgeScript = path.join(__dirname, 'chat_bridge.py');
     const customEnv = getEnv();
+    const config = vscode.workspace.getConfiguration('gcpAgentChat');
+    const pythonPath = config.get('pythonPath');
 
     // Initialize persistent JSON-RPC client
     rpcClient = new RpcClient(bridgeScript, {
         cwd: workspaceRoot,
-        env: customEnv
+        env: customEnv,
+        pythonPath: pythonPath || null
     });
 
     const provider = new AgentPlatformChatViewProvider(
@@ -91,14 +94,20 @@ function activate(context) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('gcpAgentChat')) {
-                const config = vscode.workspace.getConfiguration('gcpAgentChat');
+                const cfg = vscode.workspace.getConfiguration('gcpAgentChat');
                 if (e.affectsConfiguration('gcpAgentChat.model')) {
-                    const m = config.get('model');
+                    const m = cfg.get('model');
                     if (m) stateManager.selectedModel = m;
                 }
                 if (e.affectsConfiguration('gcpAgentChat.language')) {
-                    const l = config.get('language');
+                    const l = cfg.get('language');
                     if (l) stateManager.targetLanguage = l;
+                }
+                if (e.affectsConfiguration('gcpAgentChat.pythonPath')) {
+                    const p = cfg.get('pythonPath');
+                    if (rpcClient) {
+                        rpcClient.updatePythonPath(p);
+                    }
                 }
                 checkGcpStatus();
                 costTracker.broadcastCurrentCost();
@@ -124,6 +133,7 @@ function getEnv() {
 
 async function checkGcpStatus() {
     if (!rpcClient) return;
+    stateManager.updateGcpStatus({ loading: true, error: null });
     const config = vscode.workspace.getConfiguration('gcpAgentChat');
     const projectId = config.get('projectId') || process.env.GOOGLE_CLOUD_PROJECT || '';
     const location = config.get('location') || process.env.GOOGLE_CLOUD_LOCATION || 'global';
@@ -143,13 +153,15 @@ async function checkGcpStatus() {
             location: result.location || location,
             account: result.account || auth.account,
             authMode: result.auth_mode || auth.mode,
-            error: result.error
+            error: result.error,
+            loading: false
         });
     } catch (err) {
         stateManager.updateGcpStatus({
             authenticated: false,
             projectId: projectId || null,
-            error: err.message || 'Failed to check GCP status'
+            error: err.message || 'Failed to check GCP status',
+            loading: false
         });
     }
 }

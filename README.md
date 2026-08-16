@@ -3,9 +3,17 @@
 > **Enterprise Google Cloud Vertex AI (Gemini 3.7-flash) Assistant for VS Code & Antigravity IDE**  
 > *Seamless zero-CLI IDE Google login, autonomous multi-turn tool loops, pre-tool security firewalls, and instant fallback when default IDE quotas are exhausted.*
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version: 0.5.0](https://img.shields.io/badge/Version-0.5.0-green.svg)](package.json)
-[![Gemini: 3.7--Flash](https://img.shields.io/badge/Google%20Cloud-Vertex%20AI-4285F4.svg)](https://cloud.google.com/vertex-ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Version: 0.7.1](https://img.shields.io/badge/Version-0.7.1-green.svg?style=flat-square)](package.json)
+[![Security: Pre-Tool Firewall](https://img.shields.io/badge/Security-Pre--Tool%20Firewall-success.svg?style=flat-square&logo=securityscorecard&logoColor=white)](src/agent/hook_manager.js)
+[![Enterprise Privacy](https://img.shields.io/badge/Privacy-Enterprise%20Protected-00C853.svg?style=flat-square&logo=googlecloud&logoColor=white)](https://cloud.google.com/vertex-ai/docs/generative-ai/data-governance)
+[![Zero Token Leak](https://img.shields.io/badge/Zero--Token%20Leak-Guarded-blueviolet.svg?style=flat-square&logo=auth0&logoColor=white)](src/agent/hook_manager.js)
+[![Google Cloud: Vertex AI](https://img.shields.io/badge/Google%20Cloud-Vertex%20AI-4285F4.svg?style=flat-square&logo=googlecloud&logoColor=white)](https://cloud.google.com/vertex-ai)
+[![Gemini: 3.7 Flash](https://img.shields.io/badge/Gemini-3.7--Flash%20%2F%202.5--Pro-8E75B2.svg?style=flat-square&logo=googlegemini&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![VS Code](https://img.shields.io/badge/VS%20Code-%3E%3D%201.80.0-007ACC.svg?style=flat-square&logo=visualstudiocode&logoColor=white)](package.json)
+[![Antigravity IDE](https://img.shields.io/badge/Antigravity%20IDE-Compatible-7952B3.svg?style=flat-square)](README.md)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg?style=flat-square)](README.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/1abcdefggs/gcp-agent-chat/pulls)
 
 ![GCP Agent Chat UI](./asset/chat-v0.2.0.webp)
 
@@ -136,6 +144,7 @@ You can connect using any of the following methods:
   ```powershell
   gcloud auth application-default login
   ```
+  > **Note**: Upon completing the browser authorization, Google will send an official security email stating *"Google Auth Library was granted access to your Google Account"*. This is the standard, expected confirmation from Google.
 
 ### 3. Basic Operations & Shortcuts
 
@@ -228,33 +237,11 @@ c:\google-cloud-gcp-agent-chat\
 
 ## 📋 Version History & Release Notes
 
-### **v0.5.0** — *Native IDE Authentication & Multi-Account Hybrid Manager*
-* **Antigravity IDE Zero-CLI Authentication**: Direct integration with `vscode.authentication` API. Log into Antigravity IDE with your Google Account, enter your Project ID, and start chatting immediately without touching the `gcloud` CLI.
-* **Multi-Account Coexistence (`gcpAgentChat.authMode`)**: Added granular authentication mode selection supporting `auto`, `ide`, `gcloud` ADC, and `serviceAccount`, allowing developers to seamlessly operate GCP projects with external client/partner accounts distinct from their IDE login.
-* **Interactive QuickPick Auth Manager**: Clicking the connection status badge opens an intuitive management menu for one-click IDE login, gcloud terminal login, live auth mode switching, and token revocation.
+For detailed release notes and historical changes of each version, see **[CHANGELOG.md](CHANGELOG.md)**.
 
-### **v0.4.9** — *Autonomous Tool Execution Loop & UI Refinements*
-* **Autonomous Function Calling Loop**: Implemented a multi-turn tool execution loop in `chat_bridge.py` allowing Gemini to autonomously inspect workspace files (`read_file`, `list_files`) and return complete solutions without empty text returns.
-* **Top-Header UI Reorganization**: Moved the Language selector to the top-right action bar alongside session buttons, giving full-width visibility to the Model selection dropdown.
-* **Sleek Deep Dark Theme**: Tuned background and component colors to a refined dark OLED palette (`#0d0d12` base, `#121218` card background).
-
-### **v0.4.8** — *Session Switcher & Architecture Modularization*
-* **Interactive Session Management**: Added `+` (New Chat) and `🕘` (Session History QuickPick) buttons to seamlessly switch, resume, and manage past `.jsonl` conversation sessions.
-* **Webview Script Modularization**: Extracted `markdown_renderer.js` to isolate markdown parsing, syntax highlighting, and code action handlers.
-* **Logical Settings Hierarchy**: Introduced explicit schema `order` (1 to 7) to enforce logical top-down grouping in VS Code settings.
-
-### **v0.4.7** — *Multi-Modal Attachments & Token Budget Guardrails*
-* **Multi-Modal Image Support**: Support for uploading and pasting PNG/JPEG/WEBP screenshots directly into prompts for visual code review and UI debugging.
-* **Markdown Conversation Export**: One-click export of chat sessions directly to `.agents/artifacts/` markdown documents.
-* **Token Budget Guardrail**: Configurable monthly budget limit (`gcpAgentChat.monthlyBudgetLimit`) preventing unexpected Vertex AI API overuse.
-
-### **v0.2.0** — *Native Agent Lifecycle & Dual-Sidebar Architecture*
-* **Dual-Sidebar State Synchronization**: Seamless real-time conversation and state sharing between Primary (Activity Bar) and Secondary (Auxiliary Bar) sidebars via `ChatStateManager`.
-* **Persistent JSON-RPC 2.0 Daemon**: Replaced one-shot script spawning with a long-lived background Python daemon (`chat_bridge.py --daemon`) via `RpcClient`, eliminating cold-start execution latency.
-* **PreToolUse Security Guardrails**: Integrated `HookManager` firewall to automatically detect and intercept sensitive token leaks (`.env`), environment dumps, and destructive commands.
-* **Dynamic 115 Skills Ingestion**: Added `SkillManager` to scan the external `antigravity-agent-lifecycle` repository and dynamically inject specialized workflows via slash commands (`/`).
-
-### **v0.1.0** — *Initial Prototype & Cloud Bridge*
-* Proof-of-concept connecting VS Code / Antigravity IDE directly to Google Cloud Vertex AI using ADC authentication.
-* First interactive sidebar chat panel prototype for autonomous prompt testing.
-* Automated onboarding and validation scripts (`quicksetup-gcp-agent-chat.ps1`).
+* **[v0.7.1] (Latest)**: Interactive welcome screen with live GCP connection states & one-click sign-in button, enhanced Google Auth Library security guidance, and configuration normalization.
+* **[v0.7.0]**: Official character logo (`asset/gcpagent-logo.jpg`), Editor direct integration, Real-time cost tracker, Multi-modal image vision, and JSONL session logging.
+* **[v0.5.0]**: Antigravity IDE zero-CLI authentication (`vscode.authentication`) and multi-account hybrid manager (`gcpAgentChat.authMode`).
+* **[v0.4.9]**: Autonomous function calling multi-turn tool loop in `chat_bridge.py`.
+* **[v0.2.0]**: Dual-sidebar real-time synchronization, persistent JSON-RPC 2.0 daemon, and 115 skills ingestion.
+* **[v0.1.0]**: Initial prototype connecting Antigravity IDE directly to Vertex AI.
