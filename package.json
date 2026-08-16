@@ -2,7 +2,7 @@
   "name": "gcp-agent-chat",
   "displayName": "GCP Agent Chat - Google Cloud Vertex AI & Gemini Assistant",
   "description": "Native IDE sidebar chat assistant powered by Google Cloud Vertex AI (Gemini 3.7-flash) with zero-CLI IDE login, autonomous tool execution, and session management.",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "publisher": "1abcdefggs",
   "author": {
     "name": "1abcdefggs",
@@ -55,14 +55,14 @@
         {
           "id": "gcp-agent-chat-sidebar",
           "title": "GCP Agent Chat",
-          "icon": "asset/icon.svg"
+          "icon": "asset/gcp-agents.svg"
         }
       ],
       "panel": [
         {
           "id": "gcp-agent-chat-panel",
           "title": "GCP Agent Chat",
-          "icon": "asset/icon.svg"
+          "icon": "asset/gcp-agents.svg"
         }
       ]
     },
@@ -72,7 +72,7 @@
           "id": "gcp-agent-chat-chat-view",
           "name": "Gemini Agent Chat",
           "type": "webview",
-          "icon": "asset/icon.svg"
+          "icon": "asset/gcp-agents.svg"
         }
       ],
       "gcp-agent-chat-panel": [
@@ -80,7 +80,7 @@
           "id": "gcp-agent-chat-chat-view-panel",
           "name": "Gemini Agent Chat",
           "type": "webview",
-          "icon": "asset/icon.svg"
+          "icon": "asset/gcp-agents.svg"
         }
       ]
     },
@@ -223,6 +223,12 @@
           "type": "boolean",
           "default": true,
           "description": "Enable rich Gemini visual effects and animated glowing borders."
+        },
+        "gcpAgentChat.maskProjectId": {
+          "order": 10,
+          "type": "boolean",
+          "default": true,
+          "description": "Hide / mask Google Cloud Project ID in chat UI status badges for privacy."
         }
       }
     }

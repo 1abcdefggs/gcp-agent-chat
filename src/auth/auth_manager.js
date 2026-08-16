@@ -98,9 +98,24 @@ class AuthManager {
             });
         }
 
-        // 5. Open Settings Option
+        // 5. Toggle Masking Option
+        const isMasked = config.get('maskProjectId', true);
         items.push({
-            label: '$(gear) Configure Project ID & Settings...',
+            label: isMasked ? '$(eye) Reveal Project ID in UI' : '$(eye-closed) Mask / Hide Project ID in UI',
+            description: isMasked ? 'Currently masked (••••••) for privacy' : 'Currently visible in UI status badges',
+            action: 'toggleMask'
+        });
+
+        // 6. Set / Edit Project ID Option
+        items.push({
+            label: '$(edit) Set / Edit Google Cloud Project ID...',
+            description: `Configured: ${config.get('projectId') || '(Auto-detected: ' + currentProject + ')'}`,
+            action: 'setProjectId'
+        });
+
+        // 7. Open Settings Option
+        items.push({
+            label: '$(gear) Configure All Settings...',
             description: 'Open gcpAgentChat VS Code settings',
             action: 'settings'
         });
@@ -179,6 +194,29 @@ class AuthManager {
                         }
                         if (onRefresh) onRefresh();
                     });
+                }
+                break;
+            }
+
+            case 'toggleMask': {
+                const currentMask = config.get('maskProjectId', true);
+                await config.update('maskProjectId', !currentMask, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Project ID is now ${!currentMask ? 'masked (hidden)' : 'visible'} in UI.`);
+                if (onRefresh) onRefresh();
+                break;
+            }
+
+            case 'setProjectId': {
+                const defaultVal = config.get('projectId') || (currentStatus?.projectId && currentStatus.projectId !== '(Not configured)' ? currentStatus.projectId : '');
+                const input = await vscode.window.showInputBox({
+                    prompt: 'Enter Google Cloud Project ID (e.g., my-gcp-project)',
+                    value: defaultVal,
+                    placeHolder: 'my-gcp-project'
+                });
+                if (input !== undefined) {
+                    await config.update('projectId', input.trim(), vscode.ConfigurationTarget.Global);
+                    vscode.window.showInformationMessage(`Google Cloud Project ID updated to: ${input.trim() || '(Auto-detected)'}`);
+                    if (onRefresh) onRefresh();
                 }
                 break;
             }

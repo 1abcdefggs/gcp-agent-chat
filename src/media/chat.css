@@ -144,28 +144,106 @@ body.rich-ui .state-replying::before {
     filter: blur(3px);
 }
 
-/* ── Selectors (Model & Language) ── */
-.bottom-row { width: 100%; margin-top: 2px; }
-select {
+/* ── 🌟 Language Selector with Globe Icon ── */
+.lang-select-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     background: var(--vscode-dropdown-background, #121218);
-    color: var(--vscode-dropdown-foreground, #cdd6f4);
     border: 1px solid var(--border-color);
-    padding: 4px 8px;
     border-radius: 6px;
-    font-size: 0.75rem;
+    padding: 1px 4px 1px 6px;
+    height: 24px;
+    transition: all var(--trans-fast);
+}
+
+.lang-select-box:hover {
+    border-color: rgba(66, 133, 244, 0.4);
+    box-shadow: 0 0 8px rgba(66, 133, 244, 0.15);
+}
+
+.lang-icon {
+    width: 13px;
+    height: 13px;
+    fill: var(--text-muted);
+    flex-shrink: 0;
+}
+
+#langSelect {
+    background: transparent;
+    border: none;
+    color: var(--vscode-dropdown-foreground, #cdd6f4);
+    padding: 0 2px;
+    font-size: 0.72rem;
+    font-weight: 500;
     outline: none;
     cursor: pointer;
-    transition: border-color var(--trans-fast), box-shadow var(--trans-fast);
+    max-width: 60px;
 }
-select:hover {
-    border-color: rgba(66, 133, 244, 0.4);
+
+.mini-btn {
+    width: 20px;
+    height: 20px;
+    padding: 2px;
 }
-select:focus {
-    border-color: var(--gemini-blue);
-    box-shadow: 0 0 0 1px var(--gemini-blue), 0 0 10px rgba(66, 133, 244, 0.25);
+
+.mini-btn svg {
+    width: 12px;
+    height: 12px;
 }
-#modelSelect { width: 100%; }
-#langSelect { min-width: 50px; max-width: 65px; padding: 2px 6px; font-size: 0.72rem; height: 23px; }
+
+/* ── 🌟 Model Pill Buttons (Segmented / Chip Selector) ── */
+.bottom-row { width: 100%; margin-top: 4px; }
+
+.model-pill-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.model-pill-container::-webkit-scrollbar {
+    display: none;
+}
+
+.model-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    flex-shrink: 0;
+}
+
+.model-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-color);
+    border-color: rgba(66, 133, 244, 0.3);
+    transform: translateY(-1px);
+}
+
+body.rich-ui .model-pill.active {
+    background: linear-gradient(135deg, rgba(66, 133, 244, 0.3), rgba(155, 114, 203, 0.25));
+    border: 1px solid rgba(66, 133, 244, 0.6);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 0 10px rgba(66, 133, 244, 0.35), 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+body:not(.rich-ui) .model-pill.active {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-color: transparent;
+}
 
 /* ── Chat Container & Messages ── */
 .chat-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 4px 2px; scroll-behavior: smooth; }
@@ -255,7 +333,140 @@ body.rich-ui .ai-wrapper.error,
 
 .message.system { align-self: center; font-size: 0.78rem; border-radius: 6px; padding: 6px 10px; background: rgba(249, 226, 175, 0.08); color: var(--warning-color); }
 
-/* ── 🌟 Calm, Decisive Indicator (Thinking State) ── */
+/* ── 🌟 Agent Message Header (Robot Avatar & Name Badge) ── */
+.agent-msg-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.agent-avatar-wrap {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #1e1e2e;
+    border: 1.5px solid rgba(66, 133, 244, 0.4);
+    box-shadow: 0 0 8px rgba(66, 133, 244, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.agent-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.agent-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-color);
+    letter-spacing: 0.2px;
+}
+
+.agent-status-tag {
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--gemini-blue);
+    background: rgba(66, 133, 244, 0.12);
+    border: 1px solid rgba(66, 133, 244, 0.25);
+    padding: 1px 6px;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease;
+}
+
+/* ── 🌟 4-Bouncing Balls Thinking Indicator ── */
+.bouncing-thinking-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 4px;
+}
+
+.thinking-avatar-wrap {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #181825;
+    border: 1px solid rgba(155, 114, 203, 0.4);
+    box-shadow: 0 0 6px rgba(155, 114, 203, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.thinking-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.bouncing-dots-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 20px;
+}
+
+.bounce-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: dotBounce 1.4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bounce-dot.dot-1 {
+    background: var(--gemini-blue);
+    box-shadow: 0 0 8px var(--gemini-blue);
+    animation-delay: 0s;
+}
+
+.bounce-dot.dot-2 {
+    background: var(--gemini-purple);
+    box-shadow: 0 0 8px var(--gemini-purple);
+    animation-delay: 0.18s;
+}
+
+.bounce-dot.dot-3 {
+    background: var(--gemini-pink);
+    box-shadow: 0 0 8px var(--gemini-pink);
+    animation-delay: 0.36s;
+}
+
+.bounce-dot.dot-4 {
+    background: #10b981; /* Emerald Green */
+    box-shadow: 0 0 8px #10b981;
+    animation-delay: 0.54s;
+}
+
+@keyframes dotBounce {
+    0%, 80%, 100% {
+        transform: translateY(0) scale(0.85);
+        opacity: 0.45;
+    }
+    40% {
+        transform: translateY(-8px) scale(1.25);
+        opacity: 1;
+    }
+}
+
+.thinking-label {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    animation: fadeIn 0.4s ease;
+}
+
+/* ── 🌟 Calm, Decisive Indicator (Legacy fallback) ── */
 .calm-indicator-container {
     gap: 8px;
     padding: 8px 12px;

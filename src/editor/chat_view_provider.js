@@ -47,10 +47,19 @@ class AgentPlatformChatViewProvider {
                         gcpStatus: this._state.gcpStatus,
                         availableModels: this._state.availableModels,
                         availableLanguages: this._state.availableLanguages,
-                        enableRichAnimations: cfg.get('enableRichAnimations', true)
+                        enableRichAnimations: cfg.get('enableRichAnimations', true),
+                        maskProjectId: cfg.get('maskProjectId', true)
                     });
                     if (this._cost) this._cost.broadcastCurrentCost();
                     if (this._checkGcpStatus) await this._checkGcpStatus();
+                    break;
+                }
+                case 'selectModel': {
+                    if (data.model) {
+                        this._state.selectedModel = data.model;
+                        const cfg = vscode.workspace.getConfiguration('gcpAgentChat');
+                        await cfg.update('model', data.model, vscode.ConfigurationTarget.Global);
+                    }
                     break;
                 }
                 case 'sendMessage': {

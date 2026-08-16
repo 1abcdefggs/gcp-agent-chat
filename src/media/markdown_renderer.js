@@ -46,12 +46,18 @@
 
     function createThinkingIndicator() {
         const wrap = document.createElement('div');
-        wrap.className = 'calm-indicator-container calm-wave';
+        wrap.className = 'bouncing-thinking-indicator';
         wrap.innerHTML = `
-            <div class="dot-wrapper"><div class="dot dot-1"></div></div>
-            <div class="dot-wrapper"><div class="dot dot-2"></div></div>
-            <div class="dot-wrapper"><div class="dot dot-3"></div></div>
-            <div class="dot-wrapper"><div class="dot dot-4"></div></div>
+            <div class="thinking-avatar-wrap">
+                <img class="thinking-avatar-img" src="${window.LOGO_URI || ''}" alt="AI" />
+            </div>
+            <div class="bouncing-dots-container">
+                <div class="bounce-dot dot-1"></div>
+                <div class="bounce-dot dot-2"></div>
+                <div class="bounce-dot dot-3"></div>
+                <div class="bounce-dot dot-4"></div>
+            </div>
+            <span class="thinking-label">Thinking...</span>
         `;
         return wrap;
     }
@@ -77,13 +83,25 @@
             return row;
         }
 
-        // Agent / AI Message with Animated Glowing Border Wrapper
+        // Agent / AI Message with Animated Glowing Border Wrapper & Robot Avatar
         const aiWrapper = document.createElement('div');
         const isGenerating = status === 'thinking' || status === 'generating';
         aiWrapper.className = `ai-wrapper ${isGenerating ? 'generating' : 'finished'}`;
 
         const bubble = document.createElement('div');
         bubble.className = 'bubble ai';
+
+        // Add Agent Header with Robot Avatar Icon
+        const agentHeader = document.createElement('div');
+        agentHeader.className = 'agent-msg-header';
+        agentHeader.innerHTML = `
+            <div class="agent-avatar-wrap">
+                <img class="agent-avatar-img" src="${window.LOGO_URI || ''}" alt="Gemini Agent" />
+            </div>
+            <span class="agent-name">Gemini Agent</span>
+            ${isGenerating ? '<span class="agent-status-tag">Generating...</span>' : ''}
+        `;
+        bubble.appendChild(agentHeader);
 
         if (status === 'thinking' && (!text || text.trim() === 'Thinking...')) {
             bubble.appendChild(createThinkingIndicator());

@@ -3,21 +3,24 @@
     const $ = id => document.getElementById(id);
 
     const chatContainer = $('chatContainer'), promptInput = $('promptInput'), sendBtn = $('sendBtn');
-    const modelSelect = $('modelSelect'), langSelect = $('langSelect'), settingsBtn = $('settingsBtn');
+    const modelPillContainer = $('modelPillContainer'), langSelect = $('langSelect'), settingsBtn = $('settingsBtn');
     const newChatBtn = $('newChatBtn'), historyBtn = $('historyBtn'), exportBtn = $('exportBtn');
     const statusBadge = $('statusBadge'), statusText = $('statusText'), costBadge = $('costBadge'), costText = $('costText');
     const fileInput = $('fileInput'), attachBtn = $('attachBtn'), previewBar = $('imagePreviewBar');
     const spectrumOrb = $('spectrumOrb'), toggleEffectsBtn = $('toggleEffectsBtn'), inputWrapper = $('inputWrapper');
+    const maskToggleBtn = $('maskToggleBtn');
 
     let attachedImages = [];
     let currentGcpStatus = null;
     let isRichUi = true;
+    let isMasked = true;
+    let selectedModel = 'gemini-3.7-flash';
+    let availableModelsList = [];
 
     // ── Restore State & Effects Toggle ──
     const savedState = vscode.getState() || {};
-    if (savedState.richUi !== undefined) {
-        isRichUi = savedState.richUi;
-    }
+    if (savedState.richUi !== undefined) isRichUi = savedState.richUi;
+    if (savedState.isMasked !== undefined) isMasked = savedState.isMasked;
 
     const setRichUi = enabled => {
         isRichUi = enabled;
@@ -29,7 +32,23 @@
         vscode.setState({ ...vscode.getState(), richUi: enabled });
     };
 
+    const setMasked = masked => {
+        isMasked = masked;
+        if (maskToggleBtn) {
+            maskToggleBtn.title = masked ? 'Show Project ID (Currently Hidden)' : 'Hide Project ID (Currently Visible)';
+            const icon = $('eyeIcon');
+            if (icon) {
+                icon.innerHTML = masked
+                    ? '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>'
+                    : '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
+            }
+        }
+        vscode.setState({ ...vscode.getState(), isMasked: masked });
+        if (currentGcpStatus) updateGcpStatusUI(currentGcpStatus);
+    };
+
     setRichUi(isRichUi);
+    setMasked(isMasked);
 
     // ── Spectrum Orb Intelligence State ──
     const setOrbState = state => {
@@ -53,6 +72,7 @@
         currentGcpStatus = st;
         const isLoading = st?.loading;
         const isOk = st?.authenticated && st?.projectId;
+        const displayProj = isMasked ? '••••••' : st?.projectId;
 
         // Header status badge
         if (isLoading) {
@@ -62,8 +82,8 @@
             setOrbState('thinking');
         } else if (isOk) {
             statusBadge.className = 'badge clickable connected';
-            statusText.textContent = 'GCP : Connected';
-            statusBadge.title = `GCP : Connected (${st.projectId})\nClick for account details`;
+            statusText.textContent = isMasked ? 'GCP : Connected' : `GCP : ${st.projectId}`;
+            statusBadge.title = `GCP : Connected (${st.projectId})\nClick for account details & options`;
             setOrbState('connected');
         } else {
             statusBadge.className = 'badge clickable disconnected';
@@ -91,7 +111,7 @@
                 statusBox.innerHTML = `
                     <div class="welcome-status-pill connected clickable" id="welcomeStatusPill" title="Connected: ${st.projectId}">
                         <span class="status-dot"></span>
-                        <span>GCP : Connected (${st.projectId})</span>
+                        <span>GCP : Connected (${displayProj})</span>
                     </div>
                 `;
                 const pill = $('welcomeStatusPill');
@@ -147,8 +167,34 @@
         }
     };
 
+    // ── 🌟 Model Pill Buttons Generator ──
+    const populateModelPills = (items, currentVal) => {
+        if (!items?.length || !modelPillContainer) return;
+        availableModelsList = items;
+        if (currentVal) selectedModel = currentVal;
+
+        modelPillContainer.innerHTML = '';
+        items.forEach(item => {
+            const btn = document.createElement('button');
+            const modelId = String(item.id ?? '');
+            const modelName = String(item.name || item.id || '');
+            const isSelected = modelId === selectedModel;
+
+            btn.className = `model-pill ${isSelected ? 'active' : ''}`;
+            btn.textContent = modelName.replace('gemini-', '');
+            btn.title = `Switch to model: ${modelId}`;
+            btn.onclick = () => {
+                selectedModel = modelId;
+                Array.from(modelPillContainer.children).forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                vscode.postMessage({ type: 'selectModel', model: modelId });
+            };
+            modelPillContainer.appendChild(btn);
+        });
+    };
+
     const populateSelect = (el, items, val) => {
-        if (!items?.length) return;
+        if (!items?.length || !el) return;
         el.replaceChildren();
         items.forEach(item => {
             const option = document.createElement('option');
@@ -201,7 +247,7 @@
         vscode.postMessage({
             type: 'sendMessage',
             prompt: prompt || '(Image Attachment)',
-            model: modelSelect.value,
+            model: selectedModel,
             language: langSelect.value,
             images
         });
@@ -218,6 +264,7 @@
     promptInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
     sendBtn.addEventListener('click', send);
     if (toggleEffectsBtn) toggleEffectsBtn.addEventListener('click', () => setRichUi(!isRichUi));
+    if (maskToggleBtn) maskToggleBtn.addEventListener('click', () => setMasked(!isMasked));
     newChatBtn.addEventListener('click', () => {
         setOrbState('idle');
         vscode.postMessage({ type: 'newSession' });
@@ -240,16 +287,25 @@
     window.addEventListener('message', ({ data: msg }) => {
         switch (msg.type) {
             case 'syncState':
-                if (msg.availableModels) populateSelect(modelSelect, msg.availableModels, msg.model);
+                if (msg.availableModels) populateModelPills(msg.availableModels, msg.model);
                 if (msg.availableLanguages) populateSelect(langSelect, msg.availableLanguages, msg.language);
                 if (msg.messages !== undefined) renderMessages(msg.messages);
                 if (msg.gcpStatus) updateGcpStatusUI(msg.gcpStatus);
+                if (msg.maskProjectId !== undefined && savedState.isMasked === undefined) {
+                    setMasked(msg.maskProjectId);
+                }
                 if (msg.enableRichAnimations !== undefined && savedState.richUi === undefined) {
                     setRichUi(msg.enableRichAnimations);
                 }
                 break;
             case 'setRichAnimations':
                 setRichUi(msg.enabled);
+                break;
+            case 'setMaskProjectId':
+                setMasked(msg.masked);
+                break;
+            case 'selectModel':
+                if (msg.model) populateModelPills(availableModelsList, msg.model);
                 break;
             case 'addMessage':
                 appendMessage(msg.message.text, msg.message.sender, msg.message.status, msg.message.id);

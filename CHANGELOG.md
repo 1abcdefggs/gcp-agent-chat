@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.2] - 2026-08-16
+### Added
+- **Interactive Model Pill Buttons**: Replaced dropdown with visible, one-click segmented pill buttons highlighting the active Gemini model.
+- **Language Selector Globe Icon**: Added internationalization globe icon to the language selector for instant visual clarity.
+- **Project ID Masking & Eye Toggle**: Added project ID privacy masking in status badges with an interactive eye toggle (`#maskToggleBtn`) and `gcpAgentChat.maskProjectId` setting.
+- **4-Bouncing-Balls Thinking Indicator**: Added playful and organic 4-dot bouncing animation (Gemini blue, purple, pink, emerald green) during AI thought/generation.
+- **Agent Message Avatar & Header**: Added the official robot avatar icon and "Gemini Agent" header inside AI message bubbles.
+- **Activity Bar Icon Fix**: Corrected Activity Bar and Panel container icon path to `asset/gcp-agents.svg`.
+
+---
+
 ## [0.8.1] - 2026-08-16
 ### Added
 - **Semantic State-Based Lighting Architecture**:

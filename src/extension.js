@@ -97,7 +97,10 @@ function activate(context) {
                 const cfg = vscode.workspace.getConfiguration('gcpAgentChat');
                 if (e.affectsConfiguration('gcpAgentChat.model')) {
                     const m = cfg.get('model');
-                    if (m) stateManager.selectedModel = m;
+                    if (m) {
+                        stateManager.selectedModel = m;
+                        stateManager.broadcast({ type: 'selectModel', model: m });
+                    }
                 }
                 if (e.affectsConfiguration('gcpAgentChat.language')) {
                     const l = cfg.get('language');
@@ -112,6 +115,10 @@ function activate(context) {
                 if (e.affectsConfiguration('gcpAgentChat.enableRichAnimations')) {
                     const rich = cfg.get('enableRichAnimations', true);
                     stateManager.broadcast({ type: 'setRichAnimations', enabled: rich });
+                }
+                if (e.affectsConfiguration('gcpAgentChat.maskProjectId')) {
+                    const masked = cfg.get('maskProjectId', true);
+                    stateManager.broadcast({ type: 'setMaskProjectId', masked });
                 }
                 checkGcpStatus();
                 costTracker.broadcastCurrentCost();
