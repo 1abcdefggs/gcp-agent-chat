@@ -1,13 +1,13 @@
 ---
 name: gcp-ask-gemini
 description: >
-  Sends queries or instructions to Google Cloud Agent Platform (Gemini Enterprise Agent API).
+  Sends queries or instructions to GCP Agent Chat Platform (Gemini Enterprise Agent API).
   Supports model selection (gemini-2.5-flash, gemini-3.5-flash, gemini-3.7-flash) and target language overrides.
 ---
 
-# Google Cloud Agent Platform Query Skill
+# GCP Agent Chat Platform Query Skill
 
-Use this skill to interface directly with Google Cloud Agent Platform models using Application Default Credentials.
+Use this skill to interface directly with GCP Agent Chat Platform models using Application Default Credentials.
 
 ## Execution Pattern
 

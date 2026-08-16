@@ -49,23 +49,23 @@ function activate(context) {
 
     // Register WebviewViewProvider for Activity Bar and Bottom/Secondary Panel
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider('agent-platform-chat-view', provider),
-        vscode.window.registerWebviewViewProvider('agent-platform-chat-view-panel', provider)
+        vscode.window.registerWebviewViewProvider('gcp-agent-chat-chat-view', provider),
+        vscode.window.registerWebviewViewProvider('gcp-agent-chat-chat-view-panel', provider)
     );
 
     // Register Commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('agent-platform.openChat', () => {
-            vscode.commands.executeCommand('workbench.view.extension.agent-platform-sidebar');
+        vscode.commands.registerCommand('gcp-agent-chat.openChat', () => {
+            vscode.commands.executeCommand('workbench.view.extension.gcp-agent-chat-sidebar');
         }),
-        vscode.commands.registerCommand('agent-platform.openSettings', async () => {
+        vscode.commands.registerCommand('gcp-agent-chat.openSettings', async () => {
             try {
-                await vscode.commands.executeCommand('workbench.action.openSettings', 'agentPlatform');
+                await vscode.commands.executeCommand('workbench.action.openSettings', 'gcpAgentChat');
             } catch (e) {
                 await vscode.commands.executeCommand('workbench.action.openSettings');
             }
         }),
-        vscode.commands.registerCommand('agent-platform.askAboutCode', async () => {
+        vscode.commands.registerCommand('gcp-agent-chat.askAboutCode', async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
                 vscode.window.showWarningMessage('There are no editors open. Please open a file and try again.');
@@ -79,7 +79,7 @@ function activate(context) {
             const filename = path.basename(editor.document.fileName);
             const prompt = `Please explain/review the following code (${filename}):\n\`\`\`${editor.document.languageId}\n${selectedText}\n\`\`\``;
 
-            await vscode.commands.executeCommand('workbench.view.extension.agent-platform-sidebar');
+            await vscode.commands.executeCommand('workbench.view.extension.gcp-agent-chat-sidebar');
             stateManager.broadcast({ type: 'fillPrompt', prompt });
         })
     );
@@ -90,13 +90,13 @@ function activate(context) {
     // Refresh environment when settings change
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('agentPlatform')) {
-                const config = vscode.workspace.getConfiguration('agentPlatform');
-                if (e.affectsConfiguration('agentPlatform.model')) {
+            if (e.affectsConfiguration('gcpAgentChat')) {
+                const config = vscode.workspace.getConfiguration('gcpAgentChat');
+                if (e.affectsConfiguration('gcpAgentChat.model')) {
                     const m = config.get('model');
                     if (m) stateManager.selectedModel = m;
                 }
-                if (e.affectsConfiguration('agentPlatform.language')) {
+                if (e.affectsConfiguration('gcpAgentChat.language')) {
                     const l = config.get('language');
                     if (l) stateManager.targetLanguage = l;
                 }
@@ -108,7 +108,7 @@ function activate(context) {
 }
 
 function getEnv() {
-    const config = vscode.workspace.getConfiguration('agentPlatform');
+    const config = vscode.workspace.getConfiguration('gcpAgentChat');
     const customEnv = Object.assign({}, process.env);
     const configuredProjectId = config.get('projectId');
     const configuredLocation = config.get('location');
@@ -124,7 +124,7 @@ function getEnv() {
 
 async function checkGcpStatus() {
     if (!rpcClient) return;
-    const config = vscode.workspace.getConfiguration('agentPlatform');
+    const config = vscode.workspace.getConfiguration('gcpAgentChat');
     const projectId = config.get('projectId') || process.env.GOOGLE_CLOUD_PROJECT || '';
     const location = config.get('location') || process.env.GOOGLE_CLOUD_LOCATION || 'global';
     const auth = await AuthManager.resolveCredentials();

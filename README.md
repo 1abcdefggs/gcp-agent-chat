@@ -25,7 +25,7 @@
 ## 📖 The Story & Development Background
 
 ### 1. The Origin: Direct Enterprise Cloud Connection
-It started with a fundamental need: establishing an independent, enterprise-grade connection directly to Google Cloud Vertex AI (Gemini 3.7-flash) using Application Default Credentials (ADC) to ensure uninterrupted development even when default IDE quotas are exhausted. The initial prototype began as a simple PowerShell script (`quicksetup-agent-platform.ps1`) to verify API communication.
+It started with a fundamental need: establishing an independent, enterprise-grade connection directly to Google Cloud Vertex AI (Gemini 3.7-flash) using Application Default Credentials (ADC) to ensure uninterrupted development even when default IDE quotas are exhausted. The initial prototype began as a simple PowerShell script (`quicksetup-gcp-agent-chat.ps1`) to verify API communication.
 
 ### 2. From Terminal to Custom Sidebar UI
 Once cloud communication was proven, the next natural step was moving out of the terminal. We developed a custom VS Code extension (`src/extension.js`) embedding an interactive chat panel directly into the IDE's Primary and Secondary Sidebars. However, we quickly recognized that simple one-shot Q&A prompts were not enough — it lacked the true "autonomous, self-planning, and tool-using" capabilities of a native AI agent.
@@ -35,7 +35,7 @@ To understand how Antigravity natively executes autonomous agent loops, we inves
 Release 1.107 introduced a paradigm shift with **Agent Sessions, Multi-Agent Orchestration, Background Execution, and Tool Call Folding**.
 
 ### 4. Special Gratitude & Acknowledgement
-We extend our deepest gratitude to the **`lumusitech/AI`** repository and its author, **Carlos Luciano Figueroa**. Thanks to their deep reverse-engineering of Antigravity and VS Code agent mechanics, we were able to clearly identify the indispensable building blocks required for native agent chat and autonomous tool execution. This profound architectural insight was pivotal in empowering us to reconstruct, adapt, and build our own native Google Cloud Agent Platform.
+We extend our deepest gratitude to the **`lumusitech/AI`** repository and its author, **Carlos Luciano Figueroa**. Thanks to their deep reverse-engineering of Antigravity and VS Code agent mechanics, we were able to clearly identify the indispensable building blocks required for native agent chat and autonomous tool execution. This profound architectural insight was pivotal in empowering us to reconstruct, adapt, and build our own native GCP Agent Chat Platform.
 
 ### 5. The Synthesis: Native IDE Platform meets Google Cloud Power
 While the upstream research packaged these concepts as Linux-centric OS-level dotfiles (`~/.agent`), we synthesized these proven lifecycle theories directly into a **cross-platform (Windows/macOS/Linux), IDE-native architecture**:
@@ -92,7 +92,7 @@ This platform implements the reverse-engineered internal lifecycle specification
 
 1. **Native Antigravity IDE Authentication (Zero-CLI)**:
    - Authenticate seamlessly using your Antigravity IDE Google Account (`vscode.authentication`). Simply log into the IDE, set your Project ID, and start chatting without running terminal commands.
-2. **Multi-Account Coexistence (`agentPlatform.authMode`)**:
+2. **Multi-Account Coexistence (`gcpAgentChat.authMode`)**:
    - Supports `auto`, `ide`, `gcloud` ADC, and `serviceAccount`. Seamlessly switch between your IDE account and client/external GCP projects.
 3. **Interactive Authentication Manager**:
    - Click the `● GCP : Connected` / `● GCP : Disconnected` badge to access the interactive QuickPick menu for one-click login, account switching, status refresh, and token revocation.
@@ -127,7 +127,7 @@ You can connect using any of the following methods:
 
 * **Method A: Zero-CLI Antigravity IDE Login (Fastest)**
   1. Sign in to your Google Account at the top right of Antigravity IDE.
-  2. Open Settings (`Ctrl+,`) and set `agentPlatform.projectId` to your Google Cloud Project ID.
+  2. Open Settings (`Ctrl+,`) and set `gcpAgentChat.projectId` to your Google Cloud Project ID.
   3. The status badge will turn to `● GCP : Connected`.
 * **Method B: Status Badge QuickPick Menu**
   1. Click the `● GCP : Disconnected` badge in the chat header.
@@ -145,7 +145,7 @@ You can connect using any of the following methods:
 | **Session History** | `🕘` (Header Button) | Opens QuickPick menu to search and restore past chat logs |
 | **Export Markdown** | `⬇` (Header Button) | Exports current conversation to `.agents/artifacts/chat_*.md` |
 | **Auth & Account Manager** | `● GCP : Connected` (Badge) | View active account, switch auth modes, or logout |
-| **Open Settings** | `⚙` (Header Button) | Opens `agentPlatform` configuration settings |
+| **Open Settings** | `⚙` (Header Button) | Opens `gcpAgentChat` configuration settings |
 | **Attach Screenshots** | `📎` (Toolbar / Paste) | Upload or paste images (PNG, JPEG, WEBP) into the prompt |
 | **Slash Commands** | Type `/` in input | Triggers autocomplete for 115 Antigravity workflow skills |
 
@@ -154,7 +154,7 @@ You can connect using any of the following methods:
 If you wish to verify your Google Cloud Vertex AI connectivity and ADC quota directly in your terminal before launching the IDE chat, run the included verification script:
 
 ```powershell
-./scripts/quicksetup-agent-platform.ps1
+./scripts/quicksetup-gcp-agent-chat.ps1
 ```
 This script executes a lightweight Python verification probe to validate API quotas, Project ID resolution, and Gemini 3.7-flash connectivity.
 
@@ -162,17 +162,17 @@ This script executes a lightweight Python verification probe to validate API quo
 
 ## ⚙️ Configuration Settings
 
-Configure the extension in VS Code / Antigravity IDE Settings (`agentPlatform.*`):
+Configure the extension in VS Code / Antigravity IDE Settings (`gcpAgentChat.*`):
 
 | Setting | Default | Description |
 |---|---|---|
-| `agentPlatform.projectId` | `""` | Google Cloud Project ID (Optional; auto-detected if empty) |
-| `agentPlatform.location` | `"global"` | Google Cloud Region / Location (e.g. `global`, `us-central1`) |
-| `agentPlatform.authMode` | `"auto"` | Authentication mode (`auto`, `ide`, `gcloud`, `serviceAccount`) |
-| `agentPlatform.model` | `"gemini-3.7-flash"` | Default Gemini Model (`gemini-3.7-flash`, `gemini-2.5-pro`, etc.) |
-| `agentPlatform.language` | `"auto"` | Target response language (`auto`, `ja`, `en`, `fr`, `de`, `es`, etc.) |
-| `agentPlatform.monthlyBudgetLimit` | `10` | Monthly budget limit ($) for Vertex AI token usage protection |
-| `agentPlatform.sessionStorageLocation` | `"global"` | Chat log storage location (`global` AppData or `workspace` `.agents/sessions/`) |
+| `gcpAgentChat.projectId` | `""` | Google Cloud Project ID (Optional; auto-detected if empty) |
+| `gcpAgentChat.location` | `"global"` | Google Cloud Region / Location (e.g. `global`, `us-central1`) |
+| `gcpAgentChat.authMode` | `"auto"` | Authentication mode (`auto`, `ide`, `gcloud`, `serviceAccount`) |
+| `gcpAgentChat.model` | `"gemini-3.7-flash"` | Default Gemini Model (`gemini-3.7-flash`, `gemini-2.5-pro`, etc.) |
+| `gcpAgentChat.language` | `"auto"` | Target response language (`auto`, `ja`, `en`, `fr`, `de`, `es`, etc.) |
+| `gcpAgentChat.monthlyBudgetLimit` | `10` | Monthly budget limit ($) for Vertex AI token usage protection |
+| `gcpAgentChat.sessionStorageLocation` | `"global"` | Chat log storage location (`global` AppData or `workspace` `.agents/sessions/`) |
 
 ---
 
@@ -185,7 +185,7 @@ This project references and incorporates architectural concepts, skills, and sec
 ## 📂 Project Structure
 
 ```text
-c:\google-cloud-agent-platform\
+c:\google-cloud-gcp-agent-chat\
 ├── src/
 │   ├── extension.js               # Extension entrypoint & Webview provider
 │   ├── chat_bridge.py             # Persistent stdio JSON-RPC 2.0 daemon with Tool Loop
@@ -230,7 +230,7 @@ c:\google-cloud-agent-platform\
 
 ### **v0.5.0** — *Native IDE Authentication & Multi-Account Hybrid Manager*
 * **Antigravity IDE Zero-CLI Authentication**: Direct integration with `vscode.authentication` API. Log into Antigravity IDE with your Google Account, enter your Project ID, and start chatting immediately without touching the `gcloud` CLI.
-* **Multi-Account Coexistence (`agentPlatform.authMode`)**: Added granular authentication mode selection supporting `auto`, `ide`, `gcloud` ADC, and `serviceAccount`, allowing developers to seamlessly operate GCP projects with external client/partner accounts distinct from their IDE login.
+* **Multi-Account Coexistence (`gcpAgentChat.authMode`)**: Added granular authentication mode selection supporting `auto`, `ide`, `gcloud` ADC, and `serviceAccount`, allowing developers to seamlessly operate GCP projects with external client/partner accounts distinct from their IDE login.
 * **Interactive QuickPick Auth Manager**: Clicking the connection status badge opens an intuitive management menu for one-click IDE login, gcloud terminal login, live auth mode switching, and token revocation.
 
 ### **v0.4.9** — *Autonomous Tool Execution Loop & UI Refinements*
@@ -246,7 +246,7 @@ c:\google-cloud-agent-platform\
 ### **v0.4.7** — *Multi-Modal Attachments & Token Budget Guardrails*
 * **Multi-Modal Image Support**: Support for uploading and pasting PNG/JPEG/WEBP screenshots directly into prompts for visual code review and UI debugging.
 * **Markdown Conversation Export**: One-click export of chat sessions directly to `.agents/artifacts/` markdown documents.
-* **Token Budget Guardrail**: Configurable monthly budget limit (`agentPlatform.monthlyBudgetLimit`) preventing unexpected Vertex AI API overuse.
+* **Token Budget Guardrail**: Configurable monthly budget limit (`gcpAgentChat.monthlyBudgetLimit`) preventing unexpected Vertex AI API overuse.
 
 ### **v0.2.0** — *Native Agent Lifecycle & Dual-Sidebar Architecture*
 * **Dual-Sidebar State Synchronization**: Seamless real-time conversation and state sharing between Primary (Activity Bar) and Secondary (Auxiliary Bar) sidebars via `ChatStateManager`.
@@ -257,4 +257,4 @@ c:\google-cloud-agent-platform\
 ### **v0.1.0** — *Initial Prototype & Cloud Bridge*
 * Proof-of-concept connecting VS Code / Antigravity IDE directly to Google Cloud Vertex AI using ADC authentication.
 * First interactive sidebar chat panel prototype for autonomous prompt testing.
-* Automated onboarding and validation scripts (`quicksetup-agent-platform.ps1`).
+* Automated onboarding and validation scripts (`quicksetup-gcp-agent-chat.ps1`).

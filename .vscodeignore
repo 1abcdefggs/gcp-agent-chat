@@ -12,5 +12,5 @@ __pycache__/**
 *.vsix
 docs/**
 scripts/**
-google-cloud-agent-platform.code-workspace
+google-cloud-gcp-agent-chat.code-workspace
 

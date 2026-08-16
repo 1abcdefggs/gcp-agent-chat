@@ -35,7 +35,7 @@
         if (messages?.length) {
             messages.forEach(m => appendMessage(m.text, m.sender, m.status, m.id));
         } else {
-            appendMessage('Connected to Google Cloud Agent Platform. Feel free to inspect workspace files, generate code, or ask questions.', 'agent', 'complete');
+            appendMessage('Connected to GCP Agent Chat Platform. Feel free to inspect workspace files, generate code, or ask questions.', 'agent', 'complete');
         }
     };
 

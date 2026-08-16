@@ -7,9 +7,9 @@ class SessionStorage {
     constructor(sessionId, globalStoragePath, workspaceRoot) {
         this.sessionId = sessionId || `session_${Date.now()}`;
         this.workspaceRoot = workspaceRoot || process.cwd();
-        this.globalStoragePath = globalStoragePath || path.join(os.homedir(), '.gemini', 'agent-platform');
+        this.globalStoragePath = globalStoragePath || path.join(os.homedir(), '.gemini', 'gcp-agent-chat');
 
-        const config = vscode.workspace.getConfiguration('agentPlatform');
+        const config = vscode.workspace.getConfiguration('gcpAgentChat');
         const locationSetting = config.get('sessionStorageLocation') || 'global';
 
         if (locationSetting === 'workspace') {
@@ -128,7 +128,7 @@ class SessionStorage {
             const filename = `chat_${dateStr}.md`;
             const filePath = path.join(exportDir, filename);
 
-            let content = `# Google Cloud Agent Chat Session Export\n`;
+            let content = `# GCP Agent Chat Chat Session Export\n`;
             content += `> **Date:** ${now.toLocaleString()} | **Session ID:** \`${this.sessionId}\`\n\n---\n\n`;
 
             for (const msg of messages) {
