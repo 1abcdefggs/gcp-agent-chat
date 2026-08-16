@@ -100,35 +100,59 @@
 
         const statusBox = $('welcomeStatusBox');
         if (statusBox) {
+            statusBox.replaceChildren();
             if (isLoading) {
-                statusBox.innerHTML = `
-                    <div class="welcome-status-pill loading">
-                        <span class="spinner-dot"></span>
-                        <span>Connecting to Google Cloud...</span>
-                    </div>
-                `;
+                const pill = document.createElement('div');
+                pill.className = 'welcome-status-pill loading';
+
+                const dot = document.createElement('span');
+                dot.className = 'spinner-dot';
+
+                const label = document.createElement('span');
+                label.textContent = 'Connecting to Google Cloud...';
+
+                pill.append(dot, label);
+                statusBox.appendChild(pill);
             } else if (isOk) {
-                statusBox.innerHTML = `
-                    <div class="welcome-status-pill connected clickable" id="welcomeStatusPill" title="Connected: ${st.projectId}">
-                        <span class="status-dot"></span>
-                        <span>GCP : Connected (${displayProj})</span>
-                    </div>
-                `;
-                const pill = $('welcomeStatusPill');
-                if (pill) pill.onclick = () => vscode.postMessage({ type: 'checkStatus' });
+                const pill = document.createElement('div');
+                pill.className = 'welcome-status-pill connected clickable';
+                pill.id = 'welcomeStatusPill';
+                pill.title = `Connected: ${st.projectId}`;
+                pill.onclick = () => vscode.postMessage({ type: 'checkStatus' });
+
+                const dot = document.createElement('span');
+                dot.className = 'status-dot';
+
+                const label = document.createElement('span');
+                label.textContent = `GCP : Connected (${displayProj})`;
+
+                pill.append(dot, label);
+                statusBox.appendChild(pill);
             } else {
-                statusBox.innerHTML = `
-                    <div class="welcome-status-pill disconnected">
-                        <span class="status-dot"></span>
-                        <span>GCP : Disconnected</span>
-                    </div>
-                    <button class="welcome-login-btn" id="welcomeLoginBtn" title="Sign in with IDE Google Login or gcloud">
-                        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
-                        <span>Connect & Sign In to GCP</span>
-                    </button>
-                `;
-                const btn = $('welcomeLoginBtn');
-                if (btn) btn.onclick = () => vscode.postMessage({ type: 'checkStatus' });
+                const pill = document.createElement('div');
+                pill.className = 'welcome-status-pill disconnected';
+
+                const dot = document.createElement('span');
+                dot.className = 'status-dot';
+
+                const label = document.createElement('span');
+                label.textContent = 'GCP : Disconnected';
+
+                pill.append(dot, label);
+
+                const btn = document.createElement('button');
+                btn.className = 'welcome-login-btn';
+                btn.id = 'welcomeLoginBtn';
+                btn.title = 'Sign in with IDE Google Login or gcloud';
+                btn.onclick = () => vscode.postMessage({ type: 'checkStatus' });
+
+                const btnText = document.createElement('span');
+                btnText.textContent = 'Connect & Sign In to GCP';
+
+                btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>';
+                btn.appendChild(btnText);
+
+                statusBox.append(pill, btn);
             }
         }
     };
@@ -207,15 +231,24 @@
     };
 
     const renderPreviews = () => {
-        previewBar.innerHTML = '';
-        attachedImages.forEach((img, i) => {
+        previewBar.replaceChildren();
+        attachedImages.forEach((imgSrc, i) => {
             const wrap = document.createElement('div');
             wrap.className = 'preview-thumb-container';
-            wrap.innerHTML = `<img class="preview-thumb" src="${img}"><button class="remove-thumb-btn">×</button>`;
-            wrap.querySelector('button').onclick = () => {
+
+            const img = document.createElement('img');
+            img.className = 'preview-thumb';
+            img.src = imgSrc;
+
+            const btn = document.createElement('button');
+            btn.className = 'remove-thumb-btn';
+            btn.textContent = '×';
+            btn.onclick = () => {
                 attachedImages.splice(i, 1);
                 renderPreviews();
             };
+
+            wrap.append(img, btn);
             previewBar.appendChild(wrap);
         });
         adjustHeight();

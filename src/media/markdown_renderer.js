@@ -94,13 +94,29 @@
         // Add Agent Header with Robot Avatar Icon
         const agentHeader = document.createElement('div');
         agentHeader.className = 'agent-msg-header';
-        agentHeader.innerHTML = `
-            <div class="agent-avatar-wrap">
-                <img class="agent-avatar-img" src="${window.LOGO_URI || ''}" alt="Gemini Agent" />
-            </div>
-            <span class="agent-name">Gemini Agent</span>
-            ${isGenerating ? '<span class="agent-status-tag">Generating...</span>' : ''}
-        `;
+
+        const avatarWrap = document.createElement('div');
+        avatarWrap.className = 'agent-avatar-wrap';
+
+        const avatarImg = document.createElement('img');
+        avatarImg.className = 'agent-avatar-img';
+        avatarImg.src = window.LOGO_URI || '';
+        avatarImg.alt = 'Gemini Agent';
+        avatarWrap.appendChild(avatarImg);
+
+        const agentName = document.createElement('span');
+        agentName.className = 'agent-name';
+        agentName.textContent = 'Gemini Agent';
+
+        agentHeader.append(avatarWrap, agentName);
+
+        if (isGenerating) {
+            const statusTag = document.createElement('span');
+            statusTag.className = 'agent-status-tag';
+            statusTag.textContent = 'Generating...';
+            agentHeader.appendChild(statusTag);
+        }
+
         bubble.appendChild(agentHeader);
 
         if (status === 'thinking' && (!text || text.trim() === 'Thinking...')) {
