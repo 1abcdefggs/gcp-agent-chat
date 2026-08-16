@@ -60,11 +60,16 @@
             statusText.textContent = 'GCP : Connecting...';
             statusBadge.title = 'Verifying Google Cloud connection...';
             setOrbState('thinking');
+        } else if (isOk) {
+            statusBadge.className = 'badge clickable connected';
+            statusText.textContent = 'GCP : Connected';
+            statusBadge.title = `GCP : Connected (${st.projectId})\nClick for account details`;
+            setOrbState('connected');
         } else {
-            statusBadge.className = `badge clickable ${isOk ? 'connected' : 'disconnected'}`;
-            statusText.textContent = isOk ? 'GCP : Connected' : 'GCP : Disconnected';
-            statusBadge.title = isOk ? `GCP : Connected (${st.projectId})\nClick for account details` : `${st?.error || 'Project ID not configured'} (Click to connect)`;
-            setOrbState('idle');
+            statusBadge.className = 'badge clickable disconnected';
+            statusText.textContent = 'GCP : Disconnected';
+            statusBadge.title = `${st?.error || 'Project ID not configured'} (Click to connect)`;
+            setOrbState('disconnected');
         }
 
         // Welcome card wrapper & status box
