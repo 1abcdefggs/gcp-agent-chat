@@ -7,16 +7,46 @@
     const newChatBtn = $('newChatBtn'), historyBtn = $('historyBtn'), exportBtn = $('exportBtn');
     const statusBadge = $('statusBadge'), statusText = $('statusText'), costBadge = $('costBadge'), costText = $('costText');
     const fileInput = $('fileInput'), attachBtn = $('attachBtn'), previewBar = $('imagePreviewBar');
+    const spectrumOrb = $('spectrumOrb'), toggleEffectsBtn = $('toggleEffectsBtn'), inputWrapper = $('inputWrapper');
 
     let attachedImages = [];
     let currentGcpStatus = null;
+    let isRichUi = true;
+
+    // ── Restore State & Effects Toggle ──
+    const savedState = vscode.getState() || {};
+    if (savedState.richUi !== undefined) {
+        isRichUi = savedState.richUi;
+    }
+
+    const setRichUi = enabled => {
+        isRichUi = enabled;
+        document.body.classList.toggle('rich-ui', enabled);
+        if (toggleEffectsBtn) {
+            toggleEffectsBtn.classList.toggle('active', enabled);
+            toggleEffectsBtn.title = enabled ? 'Gemini Visual Effects: ON (Click to disable)' : 'Gemini Visual Effects: OFF (Click to enable)';
+        }
+        vscode.setState({ ...vscode.getState(), richUi: enabled });
+    };
+
+    setRichUi(isRichUi);
+
+    // ── Spectrum Orb Intelligence State ──
+    const setOrbState = state => {
+        if (!spectrumOrb) return;
+        spectrumOrb.className = `spectrum-orb state-${state}`;
+    };
 
     const adjustHeight = () => {
         promptInput.style.height = 'auto';
         const h = promptInput.scrollHeight;
         promptInput.style.height = (h > 180 ? 180 : Math.max(h, 32)) + 'px';
         promptInput.style.overflowY = h > 180 ? 'auto' : 'hidden';
-        sendBtn.disabled = !promptInput.value.trim() && attachedImages.length === 0;
+        const hasContent = promptInput.value.trim().length > 0 || attachedImages.length > 0;
+        sendBtn.disabled = !hasContent;
+        if (inputWrapper) {
+            inputWrapper.classList.toggle('active', hasContent);
+        }
     };
 
     const updateGcpStatusUI = st => {
@@ -29,10 +59,12 @@
             statusBadge.className = 'badge clickable loading';
             statusText.textContent = 'GCP : Connecting...';
             statusBadge.title = 'Verifying Google Cloud connection...';
+            setOrbState('thinking');
         } else {
             statusBadge.className = `badge clickable ${isOk ? 'connected' : 'disconnected'}`;
             statusText.textContent = isOk ? 'GCP : Connected' : 'GCP : Disconnected';
             statusBadge.title = isOk ? `GCP : Connected (${st.projectId})\nClick for account details` : `${st?.error || 'Project ID not configured'} (Click to connect)`;
+            setOrbState('idle');
         }
 
         // Welcome card status box
@@ -141,10 +173,13 @@
         promptInput.style.height = '32px';
         promptInput.style.overflowY = 'hidden';
         sendBtn.disabled = true;
+        if (inputWrapper) inputWrapper.classList.remove('active');
 
         const images = [...attachedImages];
         attachedImages = [];
         renderPreviews();
+
+        setOrbState('thinking');
 
         vscode.postMessage({
             type: 'sendMessage',
@@ -157,9 +192,19 @@
 
     // Event Bindings
     promptInput.addEventListener('input', adjustHeight);
+    promptInput.addEventListener('focus', () => { if (inputWrapper) inputWrapper.classList.add('active'); });
+    promptInput.addEventListener('blur', () => {
+        if (inputWrapper && !promptInput.value.trim() && attachedImages.length === 0) {
+            inputWrapper.classList.remove('active');
+        }
+    });
     promptInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
     sendBtn.addEventListener('click', send);
-    newChatBtn.addEventListener('click', () => vscode.postMessage({ type: 'newSession' }));
+    if (toggleEffectsBtn) toggleEffectsBtn.addEventListener('click', () => setRichUi(!isRichUi));
+    newChatBtn.addEventListener('click', () => {
+        setOrbState('idle');
+        vscode.postMessage({ type: 'newSession' });
+    });
     historyBtn.addEventListener('click', () => vscode.postMessage({ type: 'openSessionHistory' }));
     settingsBtn.addEventListener('click', () => vscode.postMessage({ type: 'openSettings' }));
     if (costBadge) costBadge.addEventListener('click', () => vscode.postMessage({ type: 'openSettings' }));
@@ -182,9 +227,18 @@
                 if (msg.availableLanguages) populateSelect(langSelect, msg.availableLanguages, msg.language);
                 if (msg.messages !== undefined) renderMessages(msg.messages);
                 if (msg.gcpStatus) updateGcpStatusUI(msg.gcpStatus);
+                if (msg.enableRichAnimations !== undefined && savedState.richUi === undefined) {
+                    setRichUi(msg.enableRichAnimations);
+                }
+                break;
+            case 'setRichAnimations':
+                setRichUi(msg.enabled);
                 break;
             case 'addMessage':
                 appendMessage(msg.message.text, msg.message.sender, msg.message.status, msg.message.id);
+                if (msg.message.sender === 'agent') {
+                    setOrbState(msg.message.status === 'generating' ? 'replying' : 'idle');
+                }
                 break;
             case 'updateMessage': {
                 const m = msg.message;
@@ -193,6 +247,9 @@
                 if (target) {
                     chatContainer.replaceChild(window.MarkdownRenderer.createMessageNode(m.text, m.sender, m.status, m.id, vscode), target);
                     chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+                if (m.sender === 'agent') {
+                    setOrbState(m.status === 'generating' ? 'replying' : 'idle');
                 }
                 break;
             }

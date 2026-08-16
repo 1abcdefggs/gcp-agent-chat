@@ -44,16 +44,50 @@
         el.appendChild(div);
     }
 
+    function createThinkingIndicator() {
+        const wrap = document.createElement('div');
+        wrap.className = 'calm-indicator-container calm-wave';
+        wrap.innerHTML = `
+            <div class="dot-wrapper"><div class="dot dot-1"></div></div>
+            <div class="dot-wrapper"><div class="dot dot-2"></div></div>
+            <div class="dot-wrapper"><div class="dot dot-3"></div></div>
+            <div class="dot-wrapper"><div class="dot dot-4"></div></div>
+        `;
+        return wrap;
+    }
+
     function createMessageNode(text, sender, status, id, vscode) {
-        const el = document.createElement('div');
-        if (id) el.id = id;
-        el.className = `message ${sender}${status ? ' ' + status : ''}`;
+        const row = document.createElement('div');
+        if (id) row.id = id;
+        row.className = `message-row ${sender}${status ? ' ' + status : ''}`;
+
         if (sender === 'user') {
-            el.textContent = text;
-            return el;
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble user';
+            bubble.textContent = text;
+            row.appendChild(bubble);
+            return row;
         }
 
-        if (text?.includes('```')) {
+        if (sender === 'system' || sender === 'error') {
+            const msg = document.createElement('div');
+            msg.className = `message ${sender}`;
+            msg.textContent = text;
+            row.appendChild(msg);
+            return row;
+        }
+
+        // Agent / AI Message with Animated Glowing Border Wrapper
+        const aiWrapper = document.createElement('div');
+        const isGenerating = status === 'thinking' || status === 'generating';
+        aiWrapper.className = `ai-wrapper ${isGenerating ? 'generating' : 'finished'}`;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble ai';
+
+        if (status === 'thinking' && (!text || text.trim() === 'Thinking...')) {
+            bubble.appendChild(createThinkingIndicator());
+        } else if (text?.includes('```')) {
             text.split(/(```[\s\S]*?```)/g).forEach(part => {
                 if (part.startsWith('```') && part.endsWith('```')) {
                     const firstNL = part.indexOf('\n');
@@ -70,15 +104,18 @@
                     const codeEl = document.createElement('code');
                     codeEl.textContent = code;
                     pre.append(hdr, codeEl);
-                    el.appendChild(pre);
+                    bubble.appendChild(pre);
                 } else {
-                    appendMd(el, part);
+                    appendMd(bubble, part);
                 }
             });
         } else {
-            appendMd(el, text);
+            appendMd(bubble, text);
         }
-        return el;
+
+        aiWrapper.appendChild(bubble);
+        row.appendChild(aiWrapper);
+        return row;
     }
 
     window.MarkdownRenderer = {

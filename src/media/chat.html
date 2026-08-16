@@ -9,10 +9,11 @@
     <link rel="stylesheet" href="{{styleUri}}">
 </head>
 
-<body>
+<body class="rich-ui">
     <div class="header">
         <div class="top-row">
             <div class="left-badges">
+                <div class="spectrum-orb state-idle" id="spectrumOrb" title="Gemini Intelligence State (Idle / Thinking / Replying)"></div>
                 <div class="badge clickable disconnected" id="statusBadge" title="Google Cloud Connection Status">
                     <svg class="badge-gcp-icon" viewBox="0 0 512 512" width="12" height="12"><path d="M256.083,438.958h-.025c-6.531-.01-12.403-3.982-14.831-10.046-.21-.521-21.989-53.918-63.233-94.966-41.269-41.072-94.336-62.688-94.867-62.902-6.066-2.438-10.046-8.326-10.039-14.865.007-6.537,3.983-12.415,10.053-14.842.964-.39,53.504-21.883,94.854-63.036,41.476-41.278,63-94.697,63.213-95.231,2.422-6.092,8.316-10.098,14.871-10.098h.017c6.562.007,12.456,4.012,14.867,10.113.206.521,21.716,53.924,63.206,95.216,41.538,41.341,94.333,62.827,94.861,63.039,6.064,2.436,10.045,8.316,10.045,14.852s-3.969,12.416-10.033,14.851c-.52.209-53.737,21.965-94.874,62.904-41.11,40.916-63.029,94.463-63.245,94.999-2.444,6.048-8.317,10.013-14.838,10.013h-.002ZM125.551,256.183c21.069,11.566,49.712,29.899,75.016,55.082,25.399,25.278,43.886,54.093,55.524,75.267,11.659-21.198,30.162-50.046,55.502-75.267,25.252-25.131,53.939-43.484,75.035-55.069-21.021-11.563-49.611-29.911-75.035-55.213-25.47-25.349-43.907-54.14-55.514-75.348-11.608,21.21-30.048,50.005-55.512,75.348-25.409,25.288-53.996,43.635-75.017,55.2h0Z" fill="currentColor"/></svg>
                     <span class="status-dot"></span>
@@ -21,6 +22,9 @@
             </div>
             <div class="right-badges">
                 <select id="langSelect" title="Target Language"></select>
+                <button class="icon-btn active" id="toggleEffectsBtn" title="Toggle Rich Gemini Visual Effects (ON/OFF)">
+                    <svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.4 7.6 2.6-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6L12 2z"/></svg>
+                </button>
                 <button class="icon-btn" id="newChatBtn" title="New Chat Session">
                     <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 </button>
@@ -42,7 +46,7 @@
 
     <div class="chat-container" id="chatContainer"></div>
 
-    <div class="input-wrapper">
+    <div class="input-wrapper" id="inputWrapper">
         <div class="input-card">
             <div class="image-preview-bar" id="imagePreviewBar"></div>
             <textarea id="promptInput" rows="1"

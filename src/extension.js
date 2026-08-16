@@ -109,6 +109,10 @@ function activate(context) {
                         rpcClient.updatePythonPath(p);
                     }
                 }
+                if (e.affectsConfiguration('gcpAgentChat.enableRichAnimations')) {
+                    const rich = cfg.get('enableRichAnimations', true);
+                    stateManager.broadcast({ type: 'setRichAnimations', enabled: rich });
+                }
                 checkGcpStatus();
                 costTracker.broadcastCurrentCost();
             }

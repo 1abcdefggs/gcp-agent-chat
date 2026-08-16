@@ -38,6 +38,7 @@ class AgentPlatformChatViewProvider {
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
                 case 'ready': {
+                    const cfg = vscode.workspace.getConfiguration('gcpAgentChat');
                     webviewView.webview.postMessage({
                         type: 'syncState',
                         messages: this._state.messages,
@@ -45,7 +46,8 @@ class AgentPlatformChatViewProvider {
                         language: this._state.targetLanguage,
                         gcpStatus: this._state.gcpStatus,
                         availableModels: this._state.availableModels,
-                        availableLanguages: this._state.availableLanguages
+                        availableLanguages: this._state.availableLanguages,
+                        enableRichAnimations: cfg.get('enableRichAnimations', true)
                     });
                     if (this._cost) this._cost.broadcastCurrentCost();
                     if (this._checkGcpStatus) await this._checkGcpStatus();

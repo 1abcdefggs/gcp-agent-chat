@@ -217,6 +217,12 @@
             "Current workspace directory (.agents/sessions/)"
           ],
           "description": "Location where chat session logs are automatically stored."
+        },
+        "gcpAgentChat.enableRichAnimations": {
+          "order": 9,
+          "type": "boolean",
+          "default": true,
+          "description": "Enable rich Gemini visual effects and animated glowing borders."
         }
       }
     }
