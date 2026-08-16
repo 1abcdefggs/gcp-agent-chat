@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] - 2026-08-16
+### Added
+- **Gemini AI Visual Design Architecture**: Complete UI/UX transformation bringing Google's organic, high-aesthetic visual design system to the VS Code Webview sidebar.
+- **Animated Light Beam Border**: AI message bubbles feature dynamic 4-color `conic-gradient` rotating light beams (`.ai-wrapper.generating`) during streaming, smoothly fading to subtle borders upon completion.
+- **Organic Spectrum Orb**: Header intelligence node reflecting AI lifecycle states (`idle` breathing pulse, `thinking` concentrated pulse, and `replying` multicolor spin).
+- **Calm, Decisive Wave Indicator**: Replaced generic loading spinners with a 4-dot breathing wave in Gemini's signature palette for enhanced psychological safety.
+- **Directional Input with Energy Flow**: Active focus and text input triggers a flowing gradient aura along the input card.
+- **1-Click Rich FX Toggle (`✨`) & VS Code Setting**: Added `#toggleEffectsBtn` in the header for instant, seamless toggling between **Rich Gemini Mode** and **Minimal Classic Mode**, with settings synchronization via `gcpAgentChat.enableRichAnimations`.
+
+---
+
+## [0.7.2] - 2026-08-16
+### Fixed
+- **Python Bridge Auto-Detection**: Improved fallback resolution for Python 3 executables across Windows, macOS, and Linux environments.
+
+---
+
 ## [0.7.1] - 2026-08-16
 ### Added
 - **Interactive Welcome Screen Connection & Login**: Added real-time GCP connection state badge, loading spinner animation, and a one-click "Connect & Sign In to GCP" button directly on the initial welcome screen.
