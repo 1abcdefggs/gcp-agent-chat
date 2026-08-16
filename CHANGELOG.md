@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.1] - 2026-08-16
+### Added
+- **Semantic State-Based Lighting Architecture**:
+  - **Blue / Multicolor (Active / In-Progress)**: Clockwise rotating light beams on Welcome Card during GCP connection and on AI message wrappers during generation; Energy Flow gradient along input cards during typing.
+  - **Emerald Green (Completed / Authenticated)**: Soft, elegant emerald green glowing borders on submitted user message bubbles, finished AI message cards, and connected Welcome Card & Spectrum Orb.
+  - **Rose Red (Error / Disconnected)**: Soft rose red glowing alerts on disconnected Welcome Cards, error message cards, and error-state Spectrum Orb.
+- **Welcome Card Light Beam Border**: Enhanced initial screen with full-box clockwise rotating conic beam during connection and ambient breathing glow once authenticated.
+- **Custom Ultra-Slim Scrollbars & UI Polish**: Added refined dark-theme scrollbars, glow effects for dropdown selectors, and subtle 1px gradient borders on code blocks.
+
+---
+
 ## [0.8.0] - 2026-08-16
 ### Added
 - **Gemini AI Visual Design Architecture**: Complete UI/UX transformation bringing Google's organic, high-aesthetic visual design system to the VS Code Webview sidebar.
