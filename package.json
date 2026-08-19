@@ -182,19 +182,19 @@
           ],
           "enumDescriptions": [
             "Auto Detect (Follow input language)",
-            "English (English)",
-            "Arabic (Ø§Ù�E¹Ø±Ø¨ÙŠØ©)",
-            "Chinese (ä¸­æ–�E",
-            "Dutch (Nederlands)",
-            "French (FranÃ§ais)",
-            "German (Deutsch)",
-            "Hindi (à¤¹à¤¿à¤¨à¥�à¤¦à¥€)",
-            "Italian (Italiano)",
-            "Japanese (æ—¥æœ¬èª�E",
-            "Korean (ú±œêµ­�E´)",
-            "Portuguese (PortuguÃªs)",
-            "Russian (Ð ÑƒÑ�E�EºÐ¸Ð¹)",
-            "Spanish (EspaÃ±ol)"
+            "English",
+            "Arabic",
+            "Chinese",
+            "Dutch",
+            "French",
+            "German",
+            "Hindi",
+            "Italian",
+            "Japanese",
+            "Korean",
+            "Portuguese",
+            "Russian",
+            "Spanish"
           ],
           "description": "Default target language for Agent responses."
         },
@@ -235,9 +235,13 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "lint:version": "node -e \"const v=require('./package.json').version; if(!/^\\d+\\.\\d+\\.\\d+$/.test(v)){console.error('Invalid semver format:', v); process.exit(1);}; console.log('Version format valid:', v);\""
+    "lint:version": "node -e \"const v=require('./package.json').version; if(!/^\\d+\\.\\d+\\.\\d+$/.test(v)){console.error('Invalid semver format:', v); process.exit(1);}; console.log('Version format valid:', v);\"",
+    "test": "node scripts/test_phase3.js"
   },
   "devDependencies": {
     "@types/vscode": "^1.80.0"
+  },
+  "dependencies": {
+    "@google/genai": "^2.17.1"
   }
 }

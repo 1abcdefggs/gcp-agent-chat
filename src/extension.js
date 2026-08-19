@@ -7,6 +7,9 @@ const { CostTracker } = require('./cost/cost_tracker');
 const { SessionStorage } = require('./storage/session_storage');
 const { AuthManager } = require('./auth/auth_manager');
 const { RpcClient } = require('./bridge/rpc_client');
+const { GeminiClient } = require('./bridge/gemini_client');
+const { PersonaManager } = require('./team/persona_registry');
+const { ChiefOrchestrator } = require('./team/chief_orchestrator');
 const { AgentPlatformChatViewProvider } = require('./editor/chat_view_provider');
 
 let stateManager = null;
@@ -15,6 +18,8 @@ let skillManager = null;
 let costTracker = null;
 let sessionStorage = null;
 let rpcClient = null;
+let geminiClient = null;
+let orchestrator = null;
 
 function activate(context) {
     stateManager = new ChatStateManager();
@@ -26,17 +31,17 @@ function activate(context) {
     const globalStoragePath = context.globalStorageUri?.fsPath || path.join(context.extensionPath, '.storage');
     sessionStorage = new SessionStorage(null, globalStoragePath, workspaceRoot);
 
-    // Resolve path to python bridge script
-    const bridgeScript = path.join(__dirname, 'chat_bridge.py');
-    const customEnv = getEnv();
-    const config = vscode.workspace.getConfiguration('gcpAgentChat');
-    const pythonPath = config.get('pythonPath');
+    // Initialize Native Node.js Gemini Client
+    geminiClient = new GeminiClient({ cwd: workspaceRoot });
 
-    // Initialize persistent JSON-RPC client
-    rpcClient = new RpcClient(bridgeScript, {
-        cwd: workspaceRoot,
-        env: customEnv,
-        pythonPath: pythonPath || null
+    // Initialize Multi-Agent Persona & Orchestrator (Phase 3)
+    const personaManager = new PersonaManager('office');
+    orchestrator = new ChiefOrchestrator({
+        personaManager,
+        sendRpcPrompt: async ({ prompt }) => {
+            const res = await geminiClient.sendMessage({ prompt });
+            return res.text;
+        }
     });
 
     const provider = new AgentPlatformChatViewProvider(
@@ -47,7 +52,9 @@ function activate(context) {
         skillManager,
         costTracker,
         sessionStorage,
-        checkGcpStatus
+        checkGcpStatus,
+        geminiClient,
+        orchestrator
     );
 
     // Register WebviewViewProvider for Activity Bar and Bottom/Secondary Panel
@@ -143,7 +150,6 @@ function getEnv() {
 }
 
 async function checkGcpStatus() {
-    if (!rpcClient) return;
     stateManager.updateGcpStatus({ loading: true, error: null });
     const config = vscode.workspace.getConfiguration('gcpAgentChat');
     const projectId = config.get('projectId') || process.env.GOOGLE_CLOUD_PROJECT || '';
@@ -151,13 +157,27 @@ async function checkGcpStatus() {
     const auth = await AuthManager.resolveCredentials();
 
     try {
-        const result = await rpcClient.call('gcp/checkStatus', {
-            projectId,
-            location,
-            token: auth.token,
-            account: auth.account,
-            authMode: auth.mode
-        });
+        let result;
+        if (geminiClient) {
+            result = await geminiClient.checkStatus({
+                projectId,
+                location,
+                token: auth.token,
+                account: auth.account,
+                authMode: auth.mode
+            });
+        } else if (rpcClient) {
+            result = await rpcClient.call('gcp/checkStatus', {
+                projectId,
+                location,
+                token: auth.token,
+                account: auth.account,
+                authMode: auth.mode
+            });
+        } else {
+            throw new Error('No status verification client available');
+        }
+
         stateManager.updateGcpStatus({
             authenticated: result.authenticated,
             projectId: result.project_id || projectId,

@@ -1,12 +1,17 @@
 const EventEmitter = require('events');
-const vscode = require('vscode');
+let vscode = null;
+try {
+    vscode = require('vscode');
+} catch (e) {
+    // vscode is injected at runtime in VS Code extension host
+}
 const { SUPPORTED_MODELS, SUPPORTED_LANGUAGES, DEFAULT_CONFIG } = require('../config/constants');
 
 class ChatStateManager extends EventEmitter {
     constructor() {
         super();
         this.messages = [];
-        const config = typeof vscode !== 'undefined' && vscode.workspace ? vscode.workspace.getConfiguration('gcpAgentChat') : null;
+        const config = vscode?.workspace?.getConfiguration ? vscode.workspace.getConfiguration('gcpAgentChat') : null;
         this.selectedModel = (config && config.get('model')) || DEFAULT_CONFIG.model;
         this.targetLanguage = (config && config.get('language')) || DEFAULT_CONFIG.language;
         this.availableModels = SUPPORTED_MODELS;
