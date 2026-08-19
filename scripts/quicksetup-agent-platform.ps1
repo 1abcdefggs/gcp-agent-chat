@@ -7,108 +7,163 @@ Quickstart setup script for Google Cloud Agent Platform (Gemini API)
 
 To use this, you must first configure it for use with a project in Google Cloud.
 
-This patch connects to Google Cloud-based agents (such as Gemini) from the IDE to test basic chat functionality. 
-I established the connection using the standard method and subsequently converted the process into a batch file. 
-
-I have not verified that it actually works.
+This script connects to Google Cloud-based agents (such as Gemini) to test basic chat functionality.
 
 .DESCRIPTION
-This script automates the initial setup for using the Google Cloud Gen AI SDK.
-It configures the necessary environment variables, installs/updates the SDK,
-generates a sample Python script (request.py) to test the Gemini 3.6 Flash model,
-and executes the script to verify the cloud connection.
+This script automates the initial setup for using the Google Cloud Gen AI SDK:
+1. Validates Python environment and resolves a working Python interpreter.
+2. Configures necessary Google Cloud environment variables.
+3. Installs/updates the `google-genai` Python SDK.
+4. Generates a sample script (request.py) and executes it to verify connectivity.
 
-.LINK
-Official Documentation: 
-You can connect by following the instructions here.
-https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/start
-
-.USAGE INSTRUCTIONS (2 Patterns)
-[Pattern 1: Run as a saved file]
-1. Save this code as a file named `quicksetup-agent-platform.ps1`.
-2. Change "YOUR_PROJECT_ID" in the code below to your actual Google Cloud Project ID.
-3. Open your PowerShell terminal, navigate to the folder, and run: 
+.USAGE INSTRUCTIONS
+1. Set `$env:GOOGLE_CLOUD_PROJECT` below (or pass via environment).
+2. Run in PowerShell:
    .\quicksetup-agent-platform.ps1
 
-[Pattern 2: Copy and paste directly into the terminal]
-1. Change "YOUR_PROJECT_ID" in the code below to your actual Google Cloud Project ID.
-2. Copy the entire code and paste it directly into your PowerShell terminal.
-3. Press Enter to execute. 
-   (Note: The setup script itself will not be saved, but request.py will be generated).
-
 .PREREQUISITES
-- Python and pip must be installed on your system.
-- Google Cloud CLI (gcloud) must be authenticated. 
-  (Run `gcloud auth application-default login` before running this script).
-- A valid Google Cloud Project with the Agent Platform API enabled.
+- Python 3.10+ installed on your system.
+- Google Cloud CLI authenticated (`gcloud auth application-default login`).
+- A valid Google Cloud Project with the Agent Platform / Vertex AI API enabled.
 #>
 
-# 1. Set necessary environment variables
-Write-Host "=== 1. Setting environment variables... ===" -ForegroundColor Cyan
+$ErrorActionPreference = "Stop"
 
-# [!] Replace "YOUR_PROJECT_ID" with your actual Google Cloud Project ID.
-# Note: This is your unique Project ID (e.g., "my-project-123"), not the Project Name.
-$env:GOOGLE_CLOUD_PROJECT = "YOUR_PROJECT_ID"
+Write-Host "=== Google Cloud Agent Platform Quick Setup & Test ===" -ForegroundColor Cyan
 
-# [!] Specify the region for the API request.
-# "global" routes automatically to the optimal location.
-# Other examples: "us-central1" (Iowa, USA) or "asia-northeast1" (Tokyo, Japan).
-$env:GOOGLE_CLOUD_LOCATION = "us-central1"
+# ----------------------------------------------------
+# 1. Resolve a working Python executable
+# ----------------------------------------------------
+Write-Host "`n[Step 1/4] Checking Python environment..." -ForegroundColor Cyan
 
-# [!] Set to "True" to route requests to the enterprise-grade Vertex AI (Agent Platform) backend.
+$knownPaths = @(
+    "$env:LOCALAPPDATA\Python\pythoncore-3.14-64\python.exe",
+    "$env:LOCALAPPDATA\Programs\Python\Python314\python.exe",
+    "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe",
+    "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
+    "C:\Python314\python.exe",
+    "C:\Python313\python.exe",
+    "C:\Python312\python.exe"
+)
+
+$selectedPythonPath = $null
+
+# Check known functional paths first
+foreach ($p in $knownPaths) {
+    if (Test-Path $p) {
+        $check = & $p -c "import sys, encodings; print(sys.executable)" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $check) {
+            $selectedPythonPath = $p
+            break
+        }
+    }
+}
+
+# Fallback to PATH commands if known paths not found
+if (-not $selectedPythonPath) {
+    $commands = @("python.exe", "python3.exe", "py.exe")
+    foreach ($cmd in $commands) {
+        $found = Get-Command $cmd -ErrorAction SilentlyContinue
+        if ($found) {
+            $check = & $cmd -c "import sys, encodings; print(sys.executable)" 2>$null
+            if ($LASTEXITCODE -eq 0 -and $check) {
+                $selectedPythonPath = $found.Source
+                break
+            }
+        }
+    }
+}
+
+if (-not $selectedPythonPath) {
+    Write-Host "[ERROR] Could not find a functional Python interpreter with standard libraries." -ForegroundColor Red
+    Write-Host "Please ensure Python 3.10+ is installed and accessible." -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "[OK] Using Python: $selectedPythonPath" -ForegroundColor Green
+
+# ----------------------------------------------------
+# 2. Set environment variables
+# ----------------------------------------------------
+Write-Host "`n[Step 2/4] Setting environment variables..." -ForegroundColor Cyan
+
+# [!] Replace "YOUR_PROJECT_ID" with your actual Google Cloud Project ID if not set in environment.
+if (-not $env:GOOGLE_CLOUD_PROJECT -or $env:GOOGLE_CLOUD_PROJECT -eq "YOUR_PROJECT_ID") {
+    $env:GOOGLE_CLOUD_PROJECT = "YOUR_PROJECT_ID"
+}
+
+if (-not $env:GOOGLE_CLOUD_LOCATION) {
+    $env:GOOGLE_CLOUD_LOCATION = "global"
+}
+
 $env:GOOGLE_GENAI_USE_ENTERPRISE = "True"
 
-# 2. Install / Update Python SDK
-Write-Host "=== 2. Installing Google Gen AI SDK... ===" -ForegroundColor Cyan
-pip install --upgrade google-genai
+Write-Host "  GOOGLE_CLOUD_PROJECT  = $($env:GOOGLE_CLOUD_PROJECT)"
+Write-Host "  GOOGLE_CLOUD_LOCATION = $($env:GOOGLE_CLOUD_LOCATION)"
+Write-Host "  GOOGLE_GENAI_USE_ENTERPRISE = $($env:GOOGLE_GENAI_USE_ENTERPRISE)"
 
-# 3. Automatically create a test script (request.py)
-Write-Host "=== 3. Creating request.py... ===" -ForegroundColor Cyan
+# ----------------------------------------------------
+# 3. Install / Verify Google Gen AI SDK
+# ----------------------------------------------------
+Write-Host "`n[Step 3/4] Ensuring google-genai SDK is installed..." -ForegroundColor Cyan
+
+$sdkCheck = & $selectedPythonPath -c "import google.genai; print('READY')" 2>$null
+if ($sdkCheck -like "*READY*") {
+    Write-Host "[OK] google-genai SDK is already installed and ready." -ForegroundColor Green
+} else {
+    Write-Host "Installing google-genai SDK via pip..." -ForegroundColor Cyan
+    & $selectedPythonPath -m pip install --quiet --upgrade google-genai
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[OK] google-genai SDK installed successfully." -ForegroundColor Green
+    } else {
+        Write-Host "[ERROR] Failed to install google-genai SDK via pip." -ForegroundColor Red
+        exit 1
+    }
+}
+
+# ----------------------------------------------------
+# 4. Create request.py and verify connectivity
+# ----------------------------------------------------
+Write-Host "`n[Step 4/4] Creating request.py and testing connectivity..." -ForegroundColor Cyan
+
 $pythonCode = @"
 from google import genai
 from google.genai.types import HttpOptions
 import os
 
-# Initialize the Gemini client.
-# Note: This automatically reads the GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION, 
-# and GOOGLE_GENAI_USE_ENTERPRISE environment variables set in Step 1.
 client = genai.Client(
     project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
     location=os.environ.get("GOOGLE_CLOUD_LOCATION"),
     http_options=HttpOptions(api_version="v1")
 )
 
-# Send a prompt request to the Google Cloud Agent Platform.
 response = client.models.generate_content(
-    # Specify the model. 
-    # Available Serverless Google Models on Agent Platform:
-    # - "gemini-3.7-flash"
-    # - "gemini-3.6-flash"      (NEW: Latest GA model, near-Pro performance)
-    # - "gemini-3.5-flash-lite" (NEW: Ultra-fast & cost-effective lightweight model)
-    # - "gemini-3.5-flash"      (Standard Flash model)
     model="gemini-3.7-flash",
-    
-    # The actual text prompt (question) you want to ask the AI.
-    
-    contents="Hello, how are you?",
+    contents="Hello! Please reply in one short friendly sentence to confirm the connection.",
 )
 
 print("--- Response from Cloud ---")
-# Display the response from the AI.
-print(response.text)
+print(response.text.strip())
 print("--------------------------")
 "@
 
-Set-Content -Path "request.py" -Value $pythonCode -Encoding UTF8
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if (-not $scriptDir) { $scriptDir = (Get-Location).Path }
+$requestPyPath = Join-Path $scriptDir "request.py"
 
-# 4. Execute the test script
-Write-Host "=== 4. Executing the test script... ===" -ForegroundColor Cyan
+Set-Content -Path $requestPyPath -Value $pythonCode -Encoding UTF8
+Write-Host "Generated: $requestPyPath"
 
-# Run the dynamically generated Python script.
-# If the setup is correct, you should see a text response generated by the Gemini model.
-# Note: If you encounter a Permission or Authentication error here, please verify:
-# 1. You have run `gcloud auth application-default login`
-# 2. The provided YOUR_PROJECT_ID is completely correct.
-python request.py
-
-Write-Host "=== All setup and testing completed successfully! ===" -ForegroundColor Green
+Write-Host "`nExecuting test request with Gemini 3.7 Flash..." -ForegroundColor Cyan
+try {
+    & $selectedPythonPath $requestPyPath
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "`n=== All setup and connectivity testing completed successfully! ===" -ForegroundColor Green
+    } else {
+        Write-Host "`n[ERROR] Request failed with exit code $LASTEXITCODE." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+} catch {
+    Write-Host "`n[ERROR] Failed to execute $requestPyPath : $_" -ForegroundColor Red
+    exit 1
+}

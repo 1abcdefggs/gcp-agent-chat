@@ -6,7 +6,7 @@ const { ImageHandler } = require('../media/image_handler');
 const { AuthManager } = require('../auth/auth_manager');
 
 class AgentPlatformChatViewProvider {
-    constructor(extensionUri, state, rpc, hooks, skills, cost, storage, checkGcpStatusFn) {
+    constructor(extensionUri, state, rpc, hooks, skills, cost, storage, checkGcpStatusFn, geminiClient = null, orchestrator = null) {
         this._extensionUri = extensionUri;
         this._state = state;
         this._rpc = rpc;
@@ -15,6 +15,8 @@ class AgentPlatformChatViewProvider {
         this._cost = cost;
         this._storage = storage;
         this._checkGcpStatus = checkGcpStatusFn;
+        this._geminiClient = geminiClient;
+        this._orchestrator = orchestrator;
         this._view = null;
     }
 
@@ -199,18 +201,68 @@ class AgentPlatformChatViewProvider {
 
             const auth = await AuthManager.resolveCredentials();
 
-            const response = await this._rpc.call('chat/sendMessage', {
-                prompt: effectivePrompt,
-                model: model || this._state.selectedModel,
-                language: targetLangId,
-                languageName: targetLangName,
-                images: processedImages,
-                projectId,
-                location,
-                token: auth.token,
-                account: auth.account,
-                authMode: auth.mode
-            });
+            let response;
+            if (this._geminiClient) {
+                // Check if this should trigger multi-agent team orchestration (Phase 3)
+                if (this._orchestrator && this._orchestrator.shouldOrchestrate(effectivePrompt)) {
+                    this._state.updateMessage(agentMsg.id, {
+                        text: '[Team] Coordinating Multi-Agent Team (Chief -> Architect -> Reviewer)...',
+                        status: 'loading'
+                    });
+
+                    const teamResult = await this._geminiClient.sendMessage({
+                        prompt: `Coordinate as a virtual software development team (Chief, Architect, Reviewer) to address the following requirements:\n\n[Requirements]:\n${effectivePrompt}\n\n1. [Chief] Strategic task breakdown and direction\n2. [Architect] Architecture and modular system design\n3. [Reviewer] Security, quality audit, and recommendations\n4. [Chief Summary] Final synthesized report`,
+                        model: model || this._state.selectedModel,
+                        language: targetLangId,
+                        languageName: targetLangName,
+                        images: processedImages,
+                        projectId,
+                        location,
+                        token: auth.token,
+                        authMode: auth.mode
+                    });
+
+                    response = {
+                        success: true,
+                        text: teamResult.text,
+                        usage: teamResult.usage_metadata
+                    };
+                } else {
+                    const clientResult = await this._geminiClient.sendMessage({
+                        prompt: effectivePrompt,
+                        model: model || this._state.selectedModel,
+                        language: targetLangId,
+                        languageName: targetLangName,
+                        images: processedImages,
+                        projectId,
+                        location,
+                        token: auth.token,
+                        authMode: auth.mode
+                    });
+
+                    response = {
+                        success: true,
+                        text: clientResult.text,
+                        usage: clientResult.usage_metadata
+                    };
+                }
+            } else if (this._rpc) {
+                // Fallback to RPC if available
+                response = await this._rpc.call('chat/sendMessage', {
+                    prompt: effectivePrompt,
+                    model: model || this._state.selectedModel,
+                    language: targetLangId,
+                    languageName: targetLangName,
+                    images: processedImages,
+                    projectId,
+                    location,
+                    token: auth.token,
+                    account: auth.account,
+                    authMode: auth.mode
+                });
+            } else {
+                throw new Error('No client backend available to send message.');
+            }
 
             if (!response || !response.success) {
                 this._state.updateMessage(agentMsg.id, {
@@ -235,7 +287,7 @@ class AgentPlatformChatViewProvider {
             this._storage.appendMessage(Object.assign({}, agentMsg, finalMsg));
         } catch (err) {
             this._state.updateMessage(agentMsg.id, {
-                text: `Error: ${err.message || 'Unknown RPC Error'}`,
+                text: `Error: ${err.message || 'Unknown Error'}`,
                 status: 'error'
             });
         }
